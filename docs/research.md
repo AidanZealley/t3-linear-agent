@@ -30,6 +30,20 @@ also require agents to respect requests to disengage.
 Sources: [Best practices](https://linear.app/developers/agent-best-practices),
 [Agent Interaction Guidelines](https://linear.app/developers/aig).
 
+### Accepted Linear installation validation
+
+Accepted workstream 2 passed live app-actor installation, a signed
+session receipt, initial activity within 1.772 seconds of session creation, and
+one explicitly authorized existing-UUID reconciliation without a second activity.
+Exact IDs and timestamps are retained in the [implementation plan](implementation/plan.md#acceptance-evidence).
+Aidan accepted his observed prompt response and verified activity timestamps as
+sufficient G1 responsiveness evidence. Exact webhook HTTP response duration
+remains unverified. The five-second HTTP and ten-second initial-activity runtime
+requirements remain unchanged. Read-only cleanup verification confirms temporary
+8443 ingress and bridge 8787 are stopped, while private T3 on Serve 443 is unchanged.
+Private installation/store/secrets are retained. A persistent coding service remains
+uninstalled.
+
 ### Linear supplies implementation building blocks
 
 `@linear/sdk` provides typed API operations. Its `LinearWebhookClient` supports

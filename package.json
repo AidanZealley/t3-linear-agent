@@ -14,6 +14,7 @@
     "t3": "node dist/t3/cli.js"
   },
   "dependencies": {
+    "@linear/sdk": "^97.0.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.5"
   },

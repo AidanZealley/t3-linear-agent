@@ -1,6 +1,6 @@
 # First-version implementation plan
 
-Status: approved by Aidan on 7 October 2026; workstream 1 is accepted.
+Status: approved by Aidan on 7 October 2026; workstreams 1 and 2 are accepted.
 
 ## Orchestration record
 
@@ -17,7 +17,7 @@ Status: approved by Aidan on 7 October 2026; workstream 1 is accepted.
 | # | Workstream | Depends on | Status |
 |---|---|---|---|
 | 1 | [Standalone T3 connection](01-t3-connection.md) | Approved handoff | Accepted |
-| 2 | [Linear installation and event receipt](02-linear-installation.md) | 1 | Not started |
+| 2 | [Linear installation and event receipt](02-linear-installation.md) | 1 | Accepted |
 | 3 | [Session execution and recovery](03-session-lifecycle.md) | 1, 2 | Not started |
 | 4 | [Host installation and live development PR](04-installation-validation.md) | 3 | Not started |
 | Final | [Whole-feature review](final-review.md) | 1–4 accepted | Not started |
@@ -125,11 +125,106 @@ instance. Final review runs the package's actual test, typecheck, and build scri
 - Concrete exports, commands, and live references are in the accepted
   [workstream 1 handoff](01-t3-connection.md#implementation-handoff).
 
+### Workstream 2, accepted 7 October 2026
+
+- Delivered local OAuth app-actor installation, PKCE/browser state, rotating
+  Linear tokens, signed event validation, durable SQLite receipt and initial
+  activity retry. Typed SDK activity and session-link operations are available
+  to composition. HTTP receipt is independent of T3 and coding execution.
+- Reviewed base is `b2103346b54369ee6f9e0651cb86244640a6c073` on
+  `feat/linear-agent-v1`. Candidate files are attributable to workstream 2;
+  accepted workstream 1 contracts remain unchanged. The accepted change contains
+  implementation, handoff and plan updates in one workstream commit.
+- Prior verification passed all 23 tests, typecheck, build and tracked/untracked
+  whitespace checks on Node 24.19.0 and pnpm 11.20.0. Independent review's two
+  required corrections, malformed-target crash and late-event delivery blocking,
+  passed one remediation pass and fresh focused closure. No implementation
+  correction was needed during subsequent gate recovery.
+- Lasting owner decisions: Aidan registered T3, entered secrets privately and
+  operates temporary bridge/Funnel himself. Agents verify read-only and must
+  not start, stop, restart or change either. Private directory/file metadata
+  passed 0700/0600 checks without exposing contents. Installed IDs and live
+  evidence are retained below. No host services or coding tasks were started
+  by agents, and no G2/G3 authorization follows.
+- Resolved DNS diagnostics: Aidan confirmed enabled Agent session events, the
+  expected webhook URL and matching private signing secret. The earlier AID-6
+  session `4432dc26-e3b8-488a-a439-928cc04bb7a7` failed before HTTP because DNS
+  lookup failed, and Linear did not retry. Aidan resolved public DNS; subsequent
+  Google/Cloudflare answers and normal TLS-verified HTTPS pinned to each of the
+  three public relay addresses proved public readiness without MagicDNS.
+  The later fresh event/session on existing AID-6 supplies the live proof below.
+- Aidan authorized exactly one call using the existing session and persisted
+  initial-activity UUID. The call and follow-up API check passed without a second
+  activity. No further activity call, issue/session creation, message or coding
+  dispatch is authorized. "Working..." is expected because this candidate only
+  acknowledges; workstream 3 owns final lifecycle reporting.
+- Concrete schema and composition contracts are in the
+  [workstream 2 handoff](02-linear-installation.md#implementation-handoff).
+- Approved G1 evidence adjustment, 7 October 2026: Aidan accepts his observed
+  prompt response plus the verified 1.772-second initial-activity timestamps as
+  sufficient responsiveness evidence for G1. His exact approval was "Yeah do
+  that and if I start seeing timeout errors I'll revisit it". Exact original
+  HTTP response duration remains unverified. This adjusts the gate's evidence;
+  the five-second HTTP and ten-second initial-activity runtime requirements
+  remain unchanged. No response-timing logging, telemetry request or fresh
+  delegation is required solely to close this evidence gap.
+- Verified evidence retained from resolved `G1-LIVE-2026-10-07`, recorded at
+  11:44 UTC on 7 October 2026: read-only SQLite has one
+  durable `created` receipt, sequence 1, delivery
+  `76a7ed6f-fc0d-4399-ad28-803aaadc7b08`, for AID-6 session
+  `59f7671f-3e94-4474-ac86-62ab0b1ad95d`. Its signed timestamp is
+  `2026-10-07T11:41:42.846Z`; the persisted initial intent's unchanged `next_at`
+  is `2026-10-07T11:41:43.153Z`, 307 ms later. Receipt identity matches installed
+  workspace `3afa0fa8-1d2b-42ae-97d6-4c78c0e04062`, app user
+  `bce8f748-3b4b-462d-91c4-dba29d01fa84`, client
+  `f9fb74f937104357c1922e3613101ea9`. Receipt provenance is the reviewed signature,
+  timestamp and identity-validated HTTP path; raw signature/body are not retained.
+  SQLite has one initial activity, UUID `13e5f555-1e22-4d0b-be66-864ac6625923`,
+  status `sent`, attempts 0. Read-only Linear API confirms this exact session was
+  created at `11:41:41.588Z`, started at `11:41:43.380Z`, and has exactly one
+  activity with that UUID, created at `11:41:43.360Z`, containing the expected
+  thought. The API connection has no next page. Activity creation was 1.772 s
+  after session creation and 514 ms after the signed event timestamp, proving
+  the initial activity was sent within ten seconds. The owner screenshot proves
+  it is visible. API also confirms T3 app, assignable and mentionable flags.
+  Linear remains active with no endedAt, as expected for this candidate.
+- Scoped reconciliation evidence at 12:06 UTC: the lead made exactly one
+  `Linear.initialActivity("59f7671f-3e94-4474-ac86-62ab0b1ad95d", "13e5f555-1e22-4d0b-be66-864ac6625923")`
+  call. It resolved between `12:06:24.575Z` and `12:06:25.783Z`.
+  Subsequent read-only API returned exactly one activity, the same UUID and fixed
+  thought, with original creation time `11:41:43.360Z` and no next page. No second
+  activity was created. This proves live existing-UUID reconciliation; the probe's
+  1.208 s duration is not evidence of the original webhook response time.
+- Final cleanup and acceptance at 12:19 UTC: Aidan reported "It's all stopped
+  now". Read-only `tailscale funnel status --json` and `tailscale serve status
+  --json` show only HTTPS 443, still proxying to `http://127.0.0.1:3773`.
+  Public 8443 and all Funnel allow entries are absent. `ss -ltn 'sport = :8787'`
+  returns no listener. Private directory/store/secret-file metadata remains
+  0700/0600/0600. Agents made no host/process changes and preserved the private
+  installation, store and secrets. Resolved `G1-CLEANUP-2026-10-07` is retained
+  here as the lasting cleanup handoff; its escalation is removed.
+- Recovery confirmed branch/base and ownership of every candidate change.
+  Prior independent review, one remediation pass and fresh focused closure remain
+  sound. Seven focused Linear tests and diff validation passed again; recorded
+  23-test, typecheck and build results remain reusable for this documentation-only
+  acceptance. No implementation correction, further review loop or additional
+  account/issue dispatch was needed. No required or optional findings remain.
+- Installed status: T3 is installed as an assignable/mentionable Linear app actor,
+  with identity and credentials retained in the private SQLite store. The temporary
+  validation bridge and public ingress are stopped. No persistent bridge service
+  or coding integration is installed; private T3 on Serve 443 remains unchanged.
+- Pending external checks: workstream 3 owns coding composition and recovery;
+  workstream 4 owns permanent service/public endpoint installation under G2 and
+  the development issue/draft PR under G3. External question answers and controlled
+  isolated T3 restart remain whole-feature live checks. G1 Passed grants no host
+  changes, coding dispatch, push or merge authorization. Exact HTTP response
+  duration remains unverified under the approved evidence adjustment above.
+
 ## External validation gates
 
 | Gate | Owner and placement | Status | Candidate/evidence | Resume condition |
 |---|---|---|---|---|
-| G1 Linear app setup | 2, after candidate checks, before live auth/event verification | Pending | Lead records URLs, requested scopes, app settings, and private-secret setup instructions | Aidan registers/configures app and completes admin OAuth consent; lead verifies signed event and activity |
+| G1 Linear app setup | 2, after candidate checks, before live auth/event verification | Passed | OAuth actor, signed receipt, 1.772 s initial activity and existing-UUID reconciliation passed; owner cleanup verified at 12:19 UTC | Complete; private installation/store/secrets retained, temporary bridge/Funnel stopped |
 | G2 Host/public endpoint | 4, after reviewed deployment candidate, before applying it | Pending | Lead records exact service files, user, command, port, secret paths, Funnel changes, and rollback | Aidan authorizes these specific host changes; lead verifies public bridge and private T3 |
 | G3 Development issue and PR | 4, after G2, before dispatching coding work | Pending | Lead records selected repository/base branch, matched projects, proposed harmless issue, and allowed push/draft-PR actions | Aidan confirms target and test; lead verifies end-to-end result and records PR URL |
 
@@ -142,10 +237,7 @@ owning packet; summaries and references belong here.
 
 ## Escalations
 
-None. When blocked, add an entry with an ID, owning row, decision/action needed,
-realistic options, recommendation, evidence, what it unblocks, and a user's-answer
-field. The orchestrator records only the answer. The resuming lead preserves the
-lasting decision in its handoff/log and removes the resolved entry.
+None.
 
 ## Decision and drift log
 
@@ -153,3 +245,12 @@ lasting decision in its handoff/log and removes the resolved entry.
 |---|---|---|---|---|
 | 2026-10-07 | Sequential first-version workflow; explicit account and installation gates | New service; no live Linear installation exists | Aidan, 7 October 2026 | 1–4 |
 | 2026-10-07 | Workstream 1 accepted without specification drift | Standalone live proof and focused checks passed; failure cleanup and lifecycle races corrected before fresh closure | Workstream 1 lead under approved scope | 1–3 |
+| 2026-10-07 | Workstream 2 reviewed local candidate; no specification drift; blocked on G1 | One remediation pass and fresh closure passed; owner registration, consent and temporary ingress are required for live proof | Workstream 2 lead under approved scope | 2–4 |
+| 2026-10-07 | Aidan operates the temporary G1 bridge and Funnel himself; agents verify read-only; no specification drift | Owner's explicit answer; latest read-only check confirms ingress configuration and installation; signed delivery/activity and owner cleanup remain pending | Aidan, recorded by orchestrator; workstream 2 recovery lead | 2–4 |
+| 2026-10-07 | G1 live delegation remains blocked without specification drift | Live API confirms AID-6 stale session with zero activities; SQLite has zero receipts despite the owner endpoint being reachable over the tailnet; owner delivery diagnostics are required | Workstream 2 live-verification lead under approved scope | 2–4 |
+| 2026-10-07 | Resolve answered G1 diagnostics; G1 remains blocked on public DNS without specification drift | Owner reports attempted delivery failed DNS before HTTP; fresh public and authoritative DNS checks return NXDOMAIN; previous hostname HTTP check used private MagicDNS | Workstream 2 DNS recovery lead under approved scope | 2–4 |
+| 2026-10-07 | Resolve answered DNS escalation; G1 public readiness passes without specification drift | Three public relays return expected HTTP 401 with normal TLS verification; signed receipt, timing, live UUID reconciliation and owner cleanup still need G1-LIVE-2026-10-07 | Workstream 2 public-readiness lead under approved scope | 2–4 |
+| 2026-10-07 | Resolve fresh AID-6 acknowledgement evidence; G1 remains blocked without specification drift | New signed event/session, exact activity UUID and 1.772 s activity deadline verified; HTTP duration, authorized existing-ID reconciliation and owner cleanup remain in G1-LIVE-2026-10-07 | Workstream 2 acknowledgement-verification lead under approved scope | 2–4 |
+| 2026-10-07 | Existing-UUID live reconciliation passes; G1 remains blocked without specification drift | One explicitly authorized call resolved and API retained exactly one original activity; successful HTTP telemetry unavailable through retained local state or installed-app API; owner evidence decision and cleanup remain | Aidan authorized scoped call; workstream 2 reconciliation lead | 2–4 |
+| 2026-10-07 | Approved G1 evidence adjustment; runtime requirements unchanged; only owner cleanup blocks acceptance | Aidan accepts observed prompt response and verified 1.772 s activity timestamps; exact HTTP duration remains unverified; no timing logging or telemetry request required | Aidan, "Yeah do that and if I start seeing timeout errors I'll revisit it"; workstream 2 gate-closure lead | 2–4 |
+| 2026-10-07 | Workstream 2 and G1 accepted; approved responsiveness evidence adjustment retained, runtime requirements unchanged | Owner cleanup verified read-only at 12:19 UTC; temporary 8443/8787 removed, private T3 443 unchanged and private store/secrets retained; prior reviewed candidate and live proof reused | Aidan supplied cleanup answer and evidence approval; workstream 2 acceptance lead | 2–4 |
