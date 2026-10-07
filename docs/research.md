@@ -1,9 +1,13 @@
 # Integration research
 
-Researched on 7 October 2026. This document records evidence and unresolved
-questions. Proposed product behaviour belongs in [the specification](spec.md).
+Researched on 7 October 2026. This document records current evidence, historical
+probes and remaining limits. Proposed product behaviour belongs in
+[the specification](spec.md).
 
 ## What has been verified
+
+Workstreams 1–4 are Accepted and G1, G2 and G3 are Passed. Final whole-feature
+review is Accepted.
 
 ### Installed bridge and development PR
 
@@ -12,11 +16,13 @@ through a fresh signed public webhook and completed one T3-managed worktree run.
 Exactly one documentation-only [draft PR #1](https://github.com/AidanZealley/t3-linear-agent/pull/1)
 targets main. Actual diff and whitespace checks pass. Linear carries progress,
 final response and external PR URL; the calling T3 conversation registers the PR.
+G3 also established a supported
+[coding-thread conversation URL](t3-thread://v1/7ece0ca2-be22-4b03-bbf1-f8e4605a2b17/mcp%3A605f3d54-4297-45a2-bc4f-4258b96303e5).
+The coding thread's separate native PR metadata remains null.
 Bridge-only restart retained all receipt/activity/session/intent/report rows and
 the same thread/worktree/run/PR without dispatch. Private T3 stayed running.
 Exact identities, permissions and evidence are in the
 [workstream 4 handoff](implementation/04-installation-validation.md#implementation-handoff).
-
 
 ### Linear supports self-hosted custom agents
 
@@ -52,10 +58,11 @@ Exact IDs and timestamps are retained in the [implementation plan](implementatio
 Aidan accepted his observed prompt response and verified activity timestamps as
 sufficient G1 responsiveness evidence. Exact webhook HTTP response duration
 remains unverified. The five-second HTTP and ten-second initial-activity runtime
-requirements remain unchanged. Read-only cleanup verification confirms temporary
-8443 ingress and bridge 8787 are stopped, while private T3 on Serve 443 is unchanged.
-Private installation/store/secrets are retained. A persistent coding service remains
-uninstalled.
+requirements remain unchanged. At G1 acceptance, read-only cleanup verification
+confirmed temporary 8443 ingress and bridge 8787 were stopped, while private T3
+on Serve 443 was unchanged.
+Private installation/store/secrets were retained. The persistent coding service
+was not yet installed; G2/G3 later installed and validated the composed bridge.
 
 ### Linear supplies implementation building blocks
 
@@ -216,9 +223,12 @@ a prompted event carries `agentActivity.signal: "stop"` and prompt
 Isolated credentials and grants were revoked, the process stopped and all fixture
 worktrees remained clean. Existing T3 and private Linear installation were
 untouched; no push or PR occurred. Later local guards passed focused checks.
-Permanent installation and real Linear-to-development-PR evidence still require
-G2 and G3. The retained G1 receipt needs explicit owner disposition before
-composed-service startup; it is not new coding authorization.
+At workstream 3 acceptance, permanent installation and real
+Linear-to-development-PR evidence still required G2/G3, and the retained G1
+receipt needed explicit owner disposition before composed-service startup. G3
+later consumed historical receipts 1/2/3 under Aidan's authorization, preserving
+their bytes and the original activity. Only fresh AID-7 delegation authorized
+the live coding test.
 
 ### Constraints that affect implementation
 
@@ -230,8 +240,8 @@ identify one thread, require operator intervention rather than launching again.
 Send retry keys are namespaced by OAuth session. Reconnecting with the same token
 retains that namespace; obtaining a replacement token changes it. Store returned
 message and run IDs, and reconcile uncertain sends before retrying under a new
-credential. The probe tested same-token retries, not credential replacement during
-an uncertain send.
+credential. The initial probe tested same-token retries. Workstream 3 later proved
+credential replacement during an uncertain send in the isolated instance.
 
 Cancellation needs queued-run cancellation as well as active-run interruption.
 Use an explicit run ID when waiting for interruption: the latest run may be a
@@ -244,25 +254,26 @@ input in Linear.
 The user's live T3 server was not restarted. Workstream 3 later proved recovery
 across an isolated T3 restart, uncertain-send handover and external question
 answers. Lost launch responses passed focused synthetic lifecycle checks.
-A supported user-accessible conversation URL remains unestablished.
+The isolated probes did not establish a supported user-accessible conversation
+URL. G3 later established the coding-thread URL linked above.
 
 Sources: [External invocation context](https://github.com/pingdotgg/t3code/blob/main/apps/server/src/mcp/McpInvocationContext.ts),
 [Question fixture](https://github.com/pingdotgg/t3code/blob/main/apps/server/src/orchestration-v2/testkit/fixtures/plan_questions/input.ts).
 
 ## Tailscale webhook endpoint
 
-Read-only inspection found Tailscale `1.102.2` running and T3 listening on
-`127.0.0.1:3773`. Tailscale Serve proxies the machine's private HTTPS endpoint on
-443 to T3. Funnel is allowed by the node's capabilities but is not enabled.
+Initial read-only inspection found Tailscale `1.102.2` running and T3 listening
+on `127.0.0.1:3773`. Serve proxied private HTTPS 443 to T3. Funnel was allowed
+by the node's capabilities but was not enabled at that pre-installation snapshot.
 
 Linear's servers cannot reach a private tailnet endpoint. Tailscale Funnel
 provides public HTTPS access on the same machine, so it can receive Linear's
 webhooks without another tunnel provider. Funnel supports HTTPS ports 443, 8443,
 and 10000. Serve and Funnel cannot share the same port with different visibility.
 
-Prefer a separate Funnel listener on 8443 pointing only to the bridge, preserving
-T3's private Serve listener on 443. The bridge's HTTP listener should expose only
-its webhook and OAuth routes and verify Linear signatures itself. Funnel does not
+The installed configuration uses a separate Funnel listener on 8443 pointing
+only to the bridge, preserving T3's private Serve listener on 443. The bridge's
+HTTP listener should expose only its webhook and OAuth routes and verify Linear signatures itself. Funnel does not
 make a request trusted merely because it reaches the server.
 
 At this pre-installation snapshot no Funnel listener was enabled. Workstream 4
@@ -323,18 +334,23 @@ system would expand this project's scope.
 
 Source: [Symphony architecture and maturity](https://github.com/kamo62/neokod/blob/main/docs/architecture/symphony.md).
 
-## Decisions still requiring evidence
+## Remaining evidence limits
 
-1. Permanent installation and actual Linear-to-development-PR flow passed the
-   approved AID-7 test. Workstream 3 completed lifecycle reconciliation checks, external
-   native answers, active-run lost-send credential handover and isolated T3 restart.
-2. Current Linear SDK event types, OAuth refresh and documented stop shapes are
-   checked. The actual Stop UI webhook was not generated; a supported
-   user-accessible T3 conversation URL remains unestablished.
-3. Public signed delivery and bridge restart passed on separate Funnel 8443;
-   private T3 443 remains unchanged.
-4. The approved development test proves unattended topic push and draft PR
-   creation. No merge, deployment or integration-branch push was authorized.
+G1–G3 are Passed, with permanent installation, public signed delivery, bridge
+restart and the approved AID-7 development PR verified. The supported conversation
+URL is linked above. Detailed gate evidence belongs in the accepted handoffs and
+plan.
+
+Exact webhook HTTP response duration remains unverified under Aidan's approved
+G1 evidence adjustment. No live Linear Stop UI or Linear-to-native-question test
+was performed. Two-project routing used isolated T3 projects with local Linear
+fixtures, and lost launch response recovery has synthetic proof. Credential
+handover and native answers were verified externally in isolated instances.
+The user's live T3 server was not restarted; isolated T3 restart and installed
+bridge-only restart have separate proof.
+
+The development test proves unattended topic push and draft PR creation. No
+merge, deployment or integration-branch push was authorized.
 
 No existing turnkey bridge to this T3 server was found in the public searches.
 That is a search result, not proof that none exists. Model inference remains with

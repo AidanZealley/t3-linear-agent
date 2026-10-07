@@ -1,6 +1,6 @@
 # First-version implementation plan
 
-Status: approved by Aidan on 7 October 2026; workstreams 1–3 are accepted.
+Status: approved by Aidan on 7 October 2026; workstreams 1–4 are accepted. Final whole-feature review is Accepted.
 
 ## Orchestration record
 
@@ -20,7 +20,7 @@ Status: approved by Aidan on 7 October 2026; workstreams 1–3 are accepted.
 | 2 | [Linear installation and event receipt](02-linear-installation.md) | 1 | Accepted |
 | 3 | [Session execution and recovery](03-session-lifecycle.md) | 1, 2 | Accepted |
 | 4 | [Host installation and live development PR](04-installation-validation.md) | 3 | Accepted |
-| Final | [Whole-feature review](final-review.md) | 1–4 accepted | Not started |
+| Final | [Whole-feature review](final-review.md) | 1–4 accepted | Accepted |
 
 Allowed statuses: Not started, Implementing, Review, Remediation, Closure review,
 Blocked, Accepted. Only one row may be active. Leads own transitions and record
@@ -524,6 +524,62 @@ instance. Final review runs the package's actual test, typecheck, and build scri
   approved timing adjustment remains unchanged. Workstream 4 Accepted; installed
   composition retained, no external gate remains. Final whole-feature review next.
 
+## Final acceptance and completion report
+
+Accepted on 7 October 2026 after independent whole-feature review, two fresh
+owner documentation correction passes and fresh focused closure. One required
+finding, stale current-status prose, was resolved without implementation or host
+changes. All numbered workstreams and Final are Accepted; G1–G3 are Passed.
+The approved specification and workflow approval remain separate from this
+implementation acceptance. Detailed audit: [final review](final-review.md).
+
+Delivered behavior: signed Linear delegation is durably recorded and initially
+acknowledged, exact project names select a retained T3 project ID, and one session
+runs at a time in managed worktrees. Ordered follow-ups, native question answers,
+queue cancellation plus interruption, progress/final reporting, duplicate
+prevention, restart reconciliation and credential handover are implemented.
+T3 owns coding and conversation history; SQLite owns bridge delivery state.
+A completed investigation may answer without a PR. Permission approvals stay
+in T3. No merge, deployment or production operation is part of this version.
+
+Verification: the independent reviewer ran all 38 package tests, typecheck,
+build and working-tree/base whitespace checks successfully. It audited every
+specification acceptance criterion and retained G1–G3 evidence, including
+standalone active-run credential rotation, isolated native answers, accepted
+lost-send handover and isolated T3 restart. The deletion/simplification assessment
+found no redundant implementation machinery requiring removal. Fresh focused
+closure confirmed documentation, unchanged requirements and commands; no source
+or deployment files changed during final review.
+
+Installed status: read-only verification confirms the exact reviewed unit and
+lifecycle override, active composed bridge PID 800839 with zero restarts, private
+configuration/store modes and retained completed AID-7 state. Private T3 remains
+PID 1576 with its original start; private Serve 443 to loopback 3773 and only
+public bridge Funnel 8443 to loopback 8787 remain unchanged. Fresh signed AID-7
+produced one managed-worktree run and the approved one-file
+[draft PR #1](https://github.com/AidanZealley/t3-linear-agent/pull/1). Linear carries
+progress, checks, final response and PR external URL. The supported coding-thread
+conversation URL is established; separate native PR metadata remains null.
+The calling T3 conversation registers the PR. Final list audit confirms exactly
+that open draft. Authorized bridge-only restart retained all receipt/activity/
+session/intent/report rows and the same thread/run/worktree/PR without duplicates.
+
+Pending external checks: no required gate remains. Exact HTTP duration remains
+unverified under Aidan's approved G1 evidence adjustment; observed prompt response
+and verified 1.772-second initial activity suffice, with runtime deadlines
+unchanged. G3's initial activity was 0.609 seconds after its signed receipt.
+Live Linear Stop UI and Linear-to-native-question checks were not performed;
+focused checks and isolated external native-answer proof cover those paths.
+Two-project routing used isolated T3 projects with local Linear fixtures, and
+lost-launch recovery has synthetic proof. The live T3 server was not restarted;
+isolated T3 and installed bridge restarts have separate evidence. The draft PR
+awaits owner review. No integration push, merge, deployment, extra dispatch or
+account messaging occurred during final review.
+
+Specification drift: none. Deferred optional observations: none. G1's approved
+evidence adjustment is preserved and may be revisited if timeout errors occur.
+No escalation remains.
+
 ## External validation gates
 
 | Gate | Owner and placement | Status | Candidate/evidence | Resume condition |
@@ -565,3 +621,4 @@ None.
 | 2026-10-07 | G2 Passed after owner bridge restart; workstream 4 Blocked on separate G3 proposal without drift | Changed PID/start and exact unchanged receipt/activity/lifecycle baseline verified read-only; private T3 and bridge-only public ingress unchanged; no coding authority follows | Aidan said "Ran those now"; workstream 4 restart-verification lead | 4 |
 | 2026-10-07 | G3 approved exact test and narrow lead-run transition; readiness passed, owner delegation pending | Approved private/bridge actions complete; fresh issue and initial dispatch remain owner-run; no drift | Aidan "do it", verified by workstream 4 lead and independent reviewer | 4 |
 | 2026-10-07 | Workstream 4 and G3 accepted without specification drift | Fresh AID-7 one-file draft PR linked in Linear/calling T3 thread, exact bridge restart state equality and fresh independent evidence closure pass; no extra dispatch, integration push, merge, deploy, T3 restart or Funnel change | Workstream 4 lead under approved owner scope | 4 |
+| 2026-10-07 | Final whole-feature review Accepted without specification drift | Independent full audit and actual package checks passed; stale current documentation corrected by fresh owners, fresh focused closure passed, installed state and linked open draft audited without external mutation | Final-review lead under approved scope | Final |

@@ -1,10 +1,13 @@
 # First-version implementation workflow
 
-Status: approved by Aidan on 7 October 2026. No implementation has started.
+Status: approved by Aidan on 7 October 2026. Workstreams 1–4 are Accepted; G1, G2
+and G3 are Passed. The composed bridge is installed and the approved AID-7 test
+produced draft PR #1. Final whole-feature review is Accepted.
 
-This directory is the handoff for a fresh orchestration agent. Aidan will commit
-and push it before giving another agent the [starter prompt](starter-prompt.md).
-Do not execute this workflow merely because you are reviewing these documents.
+This directory records the approved workflow and accepted workstream handoffs.
+The original handoff was committed before execution. Resume from
+[the plan](plan.md); the [starter prompt](starter-prompt.md) remains the original
+entry point. Reviewing these documents does not authorize repeating live actions.
 
 ## Source of truth
 
@@ -17,9 +20,12 @@ specification, packets, diffs, or review findings.
 
 Use TypeScript, pnpm, Node.js 24, the official Linear SDK, a standard MCP client,
 and SQLite as specified. Choose the smallest concrete implementation within
-those boundaries. There is no application, package manifest, CI, or test suite
-yet. Workstream 1 establishes the real verification commands; later leads use
-those commands and add focused tests for their responsibilities.
+those boundaries. At the approved handoff baseline, there was no application,
+package manifest, CI, or test suite. Workstream 1 established
+[package.json](../../package.json): `pnpm test`, `pnpm typecheck`, and `pnpm build`.
+Use those commands and `git diff --check` for verification, with focused tests
+for each workstream's responsibilities. Installed and live evidence is recorded
+in the plan and accepted handoffs.
 
 ## Roles and ownership
 

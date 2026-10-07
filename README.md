@@ -7,22 +7,30 @@ are implemented and accepted. The supervised lifecycle service is installed.
 The approved AID-7 test completed in an isolated worktree and produced one
 [draft pull request](https://github.com/AidanZealley/t3-linear-agent/pull/1),
 with progress and the result linked in Linear. Bridge restart preserved that work.
+G1–G3 have passed and workstreams 1–4 are accepted. Whole-feature review is
+accepted. The completed test grants no further dispatch, merge or deployment
+authority.
 
-- [Specification](docs/spec.md) defines the proposed first version and its acceptance criteria.
-- [Research](docs/research.md) records the evidence, alternatives, and questions to resolve before implementation.
+- [Specification](docs/spec.md) defines the approved first version and its acceptance criteria.
+- [Research](docs/research.md) records the decisions, implementation evidence and remaining limits.
 - [Implementation workflow](docs/implementation/README.md) defines the approved workstreams, review loop, and installation gates.
 - [Starting prompt](docs/implementation/starter-prompt.md) hands the workflow to a fresh agent after the approved documents are committed and pushed.
 
 ## Linear OAuth installation and receipt
 
-The local Linear edge can install an app actor, persist signed events in SQLite,
-and send an initial activity. It does not start coding work yet. Live installation,
+The Linear edge installs an app actor, persists signed events in SQLite,
+and sends an initial activity. The edge-only entrypoint does not start coding;
+the installed lifecycle composition does. During G1, live installation,
 signed receipt, initial activity within 1.772 seconds and existing-UUID
-reconciliation passed G1. Temporary ingress and the validation bridge are stopped;
-the private installation, store and secrets are retained. Aidan accepted his
-observed prompt response and verified activity timestamps as sufficient gate
-evidence. Exact HTTP response duration remains unverified; runtime deadlines
+reconciliation passed. The temporary G1 bridge and ingress were stopped before
+the permanent installation. The private installation, store and secrets were
+retained. Aidan accepted his observed prompt response and verified activity
+timestamps as sufficient gate evidence. Exact HTTP response duration remains
+unverified; runtime deadlines
 remain five seconds for HTTP and ten seconds for initial activity.
+
+The following procedure records the completed OAuth setup. This host needs no
+second registration, consent or edge-only startup.
 
 Register an internal OAuth application named `T3` in Linear's API settings.
 Enable webhooks with only **Agent session events** selected. Set these URLs:
@@ -30,10 +38,11 @@ Enable webhooks with only **Agent session events** selected. Set these URLs:
 - Callback: `https://aidanzealley-macbookpro10-1.tail8a28e5.ts.net:8443/oauth/callback`
 - Webhook: `https://aidanzealley-macbookpro10-1.tail8a28e5.ts.net:8443/webhooks/linear`
 
-These URLs work after G2 authorizes the permanent bridge installation below.
-Aidan installed the reviewed edge service and Funnel on 7 October 2026. Fresh
-signed delivery and owner bridge restart pass G2. Preserve
-private T3 Serve on 443. Current authority and remaining owner steps are in the plan.
+These URLs use the permanent bridge and Funnel installed by Aidan on 7 October
+2026. Fresh signed delivery and owner bridge restart passed G2. Public 8443
+proxies only to the bridge on loopback 8787; private T3 Serve remains on 443.
+The lifecycle transition and approved test subsequently passed G3. Exact authority
+and evidence are in the plan.
 
 Create `~/.local/state/t3-linear-agent` with mode 0700. Using a local editor,
 create `linear-secrets.json` there with mode 0600. Never paste credentials into
@@ -73,13 +82,12 @@ and [webhook helper](https://linear.app/developers/sdk-webhooks).
 
 ## Run the lifecycle service
 
-Permanent hosting and coding in a selected development repository require G2 and
-G3 in the implementation plan. The accepted validation bridge and Funnel are
-stopped. The commands below do not install a host service or configure ingress.
-Use the edge-only listener for G2. Before composed startup under G3, settle the
-retained G1 validation receipt with Aidan and record authorized dispatch scope.
-Preserve its signed receipt/activity evidence. Pending historical input grants
-no permission to code or post further activities on that validation session.
+The supervised lifecycle composition and permanent Funnel are installed, with
+G2 and G3 Passed in the implementation plan. Aidan authorized consuming only
+historical validation receipts 1–3 while preserving their signed receipt/activity
+evidence; that transition is complete. They grant no coding or further activity
+authority. The configuration and manual startup instructions below describe the
+completed setup. Do not start a second process alongside the installed service.
 
 The composition uses the same private `linear-secrets.json`, `bridge.sqlite`,
 and T3 bearer credential `t3.json` under `~/.local/state/t3-linear-agent`.
@@ -106,7 +114,8 @@ each permitted T3 project ID, repository root and local base branch:
 `pnpm t3 inspect` reads project and provider/model IDs. Routing still uses the
 issue's exact, case-sensitive Linear project name. Configuration validates the
 provider/model catalog, Git repository roots and local base branches. It does
-not prove unattended GitHub authentication or PR permissions; G3 verifies those.
+not prove unattended GitHub authentication or PR permissions; G3 verified those
+for the approved AID-7 test.
 Restart the service after changing `sessions.json`.
 
 Select `T3_RUNTIME_MODE` explicitly, matching the paired credential's ceiling.
@@ -162,9 +171,9 @@ without a PR. A PR URL is also added to the Linear session's external URLs.
 
 ## Install on this host
 
-The reviewed edge service, fresh G2 signed delivery and owner bridge restart pass
-read-only verification. Installation commands below document
-the reviewed setup; do not reinstall it. Aidan chose owner-run host actions, and
+Installation commands below document the completed, reviewed setup; do not
+reinstall it or repeat the validation actions. Aidan chose owner-run G2 host
+actions, and
 G3 separately authorized the narrow private/lifecycle transition and bridge-only
 restart. Composition is now installed; the approved AID-7 test produced
 [draft PR #1](https://github.com/AidanZealley/t3-linear-agent/pull/1). Run host commands as
@@ -172,23 +181,28 @@ restart. Composition is now installed; the approved AID-7 test produced
 
 The pre-installation baseline on 7 October 2026 found systemd 255, a running user manager
 and `Linger=yes`. A user unit can therefore start at boot and survive logout;
-no change to lingering is needed. Node is `/usr/bin/node`, version 24.19.0;
-pnpm is `/usr/bin/pnpm`, version 11.20.0. The checkout is
-`/home/aidanzealley/code/t3-linear-agent`. Serve/Funnel JSON contains only private
-HTTPS 443 pointing to `http://127.0.0.1:3773`, with no Funnel allow entries.
-Port 8787 is unused. The retained state directory is 0700 and
-`linear-secrets.json` and `bridge.sqlite` are 0600. `t3.json`, `sessions.json`
-and a bridge unit are absent.
+no change to lingering was needed. Node was `/usr/bin/node`, version 24.19.0;
+pnpm was `/usr/bin/pnpm`, version 11.20.0. The checkout was
+`/home/aidanzealley/code/t3-linear-agent`. At that baseline, Serve/Funnel JSON
+contained only private HTTPS 443 pointing to `http://127.0.0.1:3773`, with no
+Funnel allow entries.
+Port 8787 was unused. The retained state directory was 0700 and
+`linear-secrets.json` and `bridge.sqlite` were 0600. `t3.json`, `sessions.json`
+and a bridge unit were absent.
 
-The [unit](deploy/t3-linear-agent.service) runs the accepted edge command directly,
+The base [unit](deploy/t3-linear-agent.service) runs the accepted edge command directly,
 restarts failures after five seconds, limits restart attempts and gives shutdown
 60 seconds to drain. It runs as the user manager's owner with umask 0077. Logs go
-to the user journal; secrets and SQLite remain outside Git. It never starts T3
-or consumes coding receipts. It can refresh Linear credentials and deliver
-pending initial acknowledgements, so any fresh validation session also needs
-explicit authorization. An already sent acknowledgement is not resent on startup.
+to the user journal; secrets and SQLite remain outside Git. The base unit never
+starts T3 or consumes coding receipts. The installed
+[lifecycle override](deploy/lifecycle.conf) selects `dist/main.js` to consume
+coding receipts and use the existing private T3 server. Both modes refresh Linear
+credentials and deliver pending initial acknowledgements, so any fresh validation
+session also needs explicit authorization. An already sent acknowledgement is not
+resent on startup.
 
-Before approved installation, recheck and retain the baseline privately:
+The approved installation procedure began by checking and retaining the baseline
+privately:
 
 ```sh
 cd /home/aidanzealley/code/t3-linear-agent
@@ -235,32 +249,34 @@ curl --silent --output /dev/null --write-out '%{http_code}\n' https://aidanzeall
 
 Expect 200, 401 and 404 respectively. Verify public DNS and normal TLS HTTPS from
 outside the tailnet as well. A host request may use MagicDNS and does not prove
-Linear reachability. Do not disable TLS checks. For signed delivery proof, ask
-Aidan to send a fresh prompted reply in the existing G1 AID-6 session, if that
-session is still accessible, saying `Installation receipt check only. Do not
-start coding.` This records input without another initial acknowledgement. If
-it is unavailable, G2 can instead explicitly authorize Aidan to create one fresh
-acknowledgement-only delegation on existing AID-6. Record the chosen session,
-delivery UUID, receipt sequence and signed timestamp, matching installed identity,
-and any new acknowledgement UUID/time. Confirm no T3 thread was created. Preserve
-both old and new pending receipts until G3 decides their disposition. Agents do
-not create Linear input or repeat activity calls for this check. This delivery
-check passed as retained sequence 3 on 7 October 2026; no further reply is needed.
+Linear reachability. Do not disable TLS checks. For signed delivery proof, Aidan
+sent `Installation receipt check only. Do not start coding.` in the existing
+G1 AID-6 session. It recorded input without another initial acknowledgement or
+T3 thread. The chosen session, delivery UUID, receipt sequence, signed timestamp
+and matching installed identity are retained in the plan. Agents created no
+Linear input or repeated activity calls. This delivery check passed as retained
+sequence 3 on 7 October 2026. G3's authorized disposition of receipts 1–3 is also
+complete; no further reply or receipt change is needed.
 
-Restart only the bridge with `systemctl --user restart t3-linear-agent.service`.
-Require it to become active again, retain the same receipts and sent activity IDs,
-and leave T3 and private 443 unchanged. This checks supervised edge recovery.
-Coding recovery is a separate G3 check.
+The G2 recovery check used only
+`systemctl --user restart t3-linear-agent.service`. The bridge became active again
+with the same receipts and sent activity IDs, leaving T3 and private 443 unchanged.
+The separate G3 coding recovery check also passed without repeating coding or
+creating another PR.
 
-## Enable coding after G3
+## Completed G3 coding transition
 
-Record the exact Linear project name, T3 project ID/title, repository path, local
-base branch, provider/model and runtime ceiling. Aidan must select one harmless
-issue and authorize edits, relevant checks, branch push and a draft PR. No merge
-or deployment is permitted. Confirm unattended GitHub authentication and T3's
-permission ceiling in that repository before dispatch.
+The following procedure records the authorized transition and AID-7 validation,
+which are complete. Keep the installed credential, configuration and lifecycle
+override. These steps do not authorize another delegation, pairing or restart.
 
-Stop the edge and make a private backup of its state before changing historical
+G3 recorded the exact Linear project name, T3 project ID/title, repository path,
+local base branch, provider/model and runtime ceiling. Aidan selected the harmless
+AID-7 task and authorized its one-file edit, relevant checks, branch push and
+draft PR. Unattended GitHub authentication and T3's permission ceiling were
+confirmed before dispatch. No merge or deployment was permitted.
+
+The edge was stopped and its state backed up privately before changing historical
 input or enabling composition.
 The retained G1 receipt is sequence 1, delivery
 `76a7ed6f-fc0d-4399-ad28-803aaadc7b08`, session
@@ -275,8 +291,9 @@ exact identities against the stopped store before using `Store.consumeEvent`
 for only the approved sequences. Do not delete the database or mark all pending
 receipts consumed. The completed host transition and exact authority are recorded in the plan.
 
-After that decision and the approved receipt disposition, pair through `pnpm t3 pair` using the approved `T3_RUNTIME_MODE` if `t3.json` is
-still absent. This creates an external-client grant and belongs to G3. Use
+For an authorized new installation, after the approved receipt disposition,
+pair through `pnpm t3 pair` using the approved `T3_RUNTIME_MODE` if `t3.json` is
+absent. This creates an external-client grant and belongs to G3. Use
 `pnpm t3 inspect` to confirm real catalog IDs and configure `sessions.json` as
 above. The accepted client discovers the executable from active T3 metadata;
 inspection currently resolves
@@ -290,7 +307,7 @@ this service: `approval-required`, `auto-accept-edits`, `auto`, or `full-access`
 The required file prevents composition starting without an explicit choice.
 The endpoint and credential/session-file defaults match this host.
 
-Once G3 authorizes the configured transition, run:
+The approved G3 transition used these commands:
 
 ```sh
 systemctl --user stop t3-linear-agent.service
@@ -302,15 +319,16 @@ systemctl --user is-active t3-linear-agent.service
 node dist/main.js status
 ```
 
-Only then have Aidan delegate the selected issue. Verify one Linear session maps
-to one T3 thread with the chosen project, base branch and isolated managed
-worktree. Inspect the result and checks; confirm the PR is a draft, appears in
-Linear's final response and external URLs, and is linked to this T3 thread through
-`link_pull_request` when available. Record the issue/session/thread/run/worktree
-IDs and PR URL without credentials. Restart the bridge during the authorized
-check and verify it retains the same thread and does not repeat coding or create
-another PR. Keep the user's T3 running. Retire obsolete probe credentials through
-their exact local client session IDs; preserve the installed bridge credential.
+Aidan then delegated AID-7. One Linear session mapped to one T3 thread with the
+chosen project, base branch and isolated managed worktree. The inspected result
+was draft PR #1, with checks and its URL in Linear's final response and external
+URLs. `link_pull_request` registered the PR with the calling T3 conversation;
+the coding thread's separate native PR metadata remains null. The plan records
+the issue/session/thread/run/worktree IDs and PR URL without credentials. The
+authorized bridge restart retained the same thread and did not repeat coding or
+create another PR. T3 remained running. Obsolete probe credentials were retired
+through their exact local client session IDs; the installed bridge credential
+was preserved.
 
 ## Operate and remove
 

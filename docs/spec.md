@@ -2,21 +2,27 @@
 
 Status: approved by Aidan on 7 October 2026 for first-version implementation. The approved AID-7 development test passed end to end.
 
-Implementation evidence as of 7 October 2026: the standalone T3 client passed
-isolated connection, idle worktree launch, idempotent send, reconnect, and active-run
-credential replacement checks. Workstreams 1–3 are accepted. Live Linear OAuth
-installation, signed receipt, initial activity within 1.772 seconds and
-existing-UUID reconciliation passed G1. Temporary bridge/Funnel cleanup is
-verified; private installation/store/secrets are retained. Aidan approved observed
-prompt response plus verified activity timestamps as sufficient G1 responsiveness
-evidence; exact HTTP response duration remains unverified. The five-second HTTP and ten-second initial-activity
-runtime requirements remain unchanged. Durable routing, queueing, native answers,
-stop, reporting and recovery are implemented. Isolated external question answers,
-lost-send credential handover and controlled T3 restart passed; subsequent
-lifecycle guards passed focused checks. The supervised bridge is installed with public signed delivery and bridge-only
-restart proof. AID-7 produced exactly one isolated one-file draft PR, linked in
-Linear and the calling T3 conversation. Workstream 4 is accepted; final whole-feature
-review remains. See the
+Implementation evidence as of 7 October 2026: workstreams 1–4 are Accepted and
+G1, G2 and G3 are Passed. The supervised composed bridge is installed on public
+Funnel 8443; private T3 remains on Serve 443. Fresh signed AID-7 delegation
+produced exactly one managed-worktree run and one one-file
+[draft PR #1](https://github.com/AidanZealley/t3-linear-agent/pull/1), linked in
+Linear and registered to the calling T3 conversation. A supported coding-thread
+conversation URL is established; its separate native PR metadata remains null.
+Bridge-only restart retained the same durable rows, thread, worktree, run and PR.
+
+Isolated T3 probes passed connection, idle worktree launch, idempotent send,
+reconnect, active-run credential replacement, native question answers, lost-send
+handover, two-project routing with local Linear
+fixtures, and controlled T3 restart. Lost launch responses have focused synthetic
+proof. These do not establish live Linear Stop UI or Linear-to-native-question
+validation. Focused tests cover routing, queueing, stop, reporting and recovery.
+
+Aidan approved observed prompt HTTP response plus verified 1.772-second initial
+activity as sufficient G1 responsiveness evidence. Exact HTTP response duration
+remains unverified. The five-second HTTP and ten-second initial-activity runtime
+requirements remain unchanged. G3 recorded a 0.609-second initial activity.
+Final whole-feature review is Accepted. See the
 [implementation plan](implementation/plan.md#acceptance-evidence).
 
 ## Outcome
