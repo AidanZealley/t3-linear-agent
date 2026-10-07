@@ -1,0 +1,19 @@
+[Unit]
+Description=Linear webhook and OAuth bridge
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/code/t3-linear-agent
+ExecStart=/usr/bin/node %h/code/t3-linear-agent/dist/linear/cli.js
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=LINEAR_SECRET_FILE=%h/.local/state/t3-linear-agent/linear-secrets.json
+Environment=LINEAR_STORE_FILE=%h/.local/state/t3-linear-agent/bridge.sqlite
+UMask=0077
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+
+[Install]
+WantedBy=default.target
