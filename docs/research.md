@@ -92,8 +92,8 @@ provide no refresh-token flow. The five-minute pairing TTL does not shorten the
 resulting bearer session. The probe demonstrated that an authorized local
 process can bootstrap access through the CLI. The specification requires
 [automatic renewal](spec.md#renew-the-t3-credential) with a pause for outstanding
-requests during handover. Renewal and its effect on an active coding run still
-need to be implemented and tested in the service.
+requests during handover. The subsequent workstream 1 implementation verified renewal during an active
+run in an isolated development instance, as recorded below.
 
 MCP initialization negotiated `2025-06-18`. Subsequent requests required the
 returned `Mcp-Session-Id` and protocol-version header. Standard MCP libraries
@@ -136,6 +136,30 @@ Evidence remains in the archived T3 thread titled
 branch `t3/linear-integration-probe`. Its Git status was clean after the probe.
 No files were edited there, and no commit, push, or PR was made. All investigation
 bearer credentials were revoked and the temporary credential files were removed.
+
+### Standalone implementation validation
+
+Workstream 1 was accepted on 7 October 2026 after independent review, one
+remediation pass, and fresh closure. A built TypeScript process using the standard
+MCP SDK paired to an isolated T3 instance on loopback 3873. It listed projects and
+provider/model capabilities, waited for an idle launch's managed worktree binding,
+proved repeated-send IDs, rotated credentials while the same harmless run remained
+active, completed a follow-up in the same thread, and reconnected to its durable
+state. Test credentials were revoked and the isolated instance stopped. The user's
+T3 server and host services were unchanged.
+
+T3 prepares idle worktrees asynchronously; a launch ID alone does not prove that
+binding is ready. The installed server also rejects `message:null` despite its
+advertised nullable schema; omitting the field creates the idle thread. The client
+handles both observations within the approved behaviour. Sixteen focused tests
+cover standard MCP transport, uncertain mutations, credential handover and failure
+cleanup, and lifecycle shutdown. The live success proof predates the reviewed
+cleanup/shutdown corrections, whose focused closure checks passed.
+
+Concrete contracts and live references are in the
+[accepted workstream 1 handoff](implementation/01-t3-connection.md#implementation-handoff).
+External question answers, lifecycle reconciliation, and controlled server restart
+remain later checks; this evidence does not establish an installed Linear service.
 
 ### Constraints that affect implementation
 
@@ -241,9 +265,10 @@ Source: [Symphony architecture and maturity](https://github.com/kamo62/neokod/bl
 
 ## Decisions still requiring evidence
 
-1. Implement and test T3 credential renewal, uncertain-launch reconciliation,
-   pending-question responses, and recovery after an actual T3 restart in a
-   controlled development environment.
+1. Connect lifecycle reconciliation for uncertain launches and sends, verify
+   external pending-question responses, and prove recovery after an actual T3
+   restart in a controlled development environment. Standalone credential renewal
+   and active-run replacement passed workstream 1 validation.
 2. Verify current Linear SDK event types, OAuth token refresh, stop signals, and
    clarification response shapes during the Linear integration phase.
 3. Deploy the bridge behind a separate Tailscale Funnel listener and verify a

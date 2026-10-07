@@ -2,6 +2,12 @@
 
 Status: approved by Aidan on 7 October 2026 for first-version implementation. No integration has been tested end to end.
 
+Implementation evidence as of 7 October 2026: the standalone T3 client passed
+isolated connection, idle worktree launch, idempotent send, reconnect, and active-run
+credential replacement checks. Workstream 1 is accepted; Linear integration and
+installed-service acceptance remain pending. See the
+[implementation plan](implementation/plan.md#acceptance-evidence).
+
 ## Outcome
 
 Aidan delegates a Linear issue to an agent named **T3**. A service on the same

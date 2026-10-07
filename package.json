@@ -1,0 +1,24 @@
+{
+  "name": "t3-linear-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "test": "node --test test/**/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "t3": "node dist/t3/cli.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}

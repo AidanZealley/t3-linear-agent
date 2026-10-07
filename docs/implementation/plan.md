@@ -1,22 +1,22 @@
 # First-version implementation plan
 
-Status: approved by Aidan on 7 October 2026; implementation has not started.
+Status: approved by Aidan on 7 October 2026; workstream 1 is accepted.
 
 ## Orchestration record
 
-- Integration branch: not started; intended `feat/linear-agent-v1`.
-- Starting commit: record current approved HEAD when execution begins.
-- Started: not started.
+- Integration branch: `feat/linear-agent-v1`.
+- Starting commit: `b47c831c3c2ac8434758934fd860c60423025b58`.
+- Started: 2026-10-07.
 - Review mechanism: fresh lead subagents, inherited model and effort.
 - Approval: specification and workflow approved by Aidan on 7 October 2026.
-  Aidan will commit and push before handing the starting prompt to another agent.
+  The approved handoff was committed before execution began.
 - Execution manual: [README](README.md). Recovery uses this plan, not chat history.
 
 ## Workstream order
 
 | # | Workstream | Depends on | Status |
 |---|---|---|---|
-| 1 | [Standalone T3 connection](01-t3-connection.md) | Approved handoff | Not started |
+| 1 | [Standalone T3 connection](01-t3-connection.md) | Approved handoff | Accepted |
 | 2 | [Linear installation and event receipt](02-linear-installation.md) | 1 | Not started |
 | 3 | [Session execution and recovery](03-session-lifecycle.md) | 1, 2 | Not started |
 | 4 | [Host installation and live development PR](04-installation-validation.md) | 3 | Not started |
@@ -96,6 +96,35 @@ external question answers, and a controlled T3 restart need recorded evidence.
 Do not restart Aidan's live T3 server for that test; use an isolated development
 instance. Final review runs the package's actual test, typecheck, and build scripts.
 
+## Acceptance evidence
+
+### Workstream 1, accepted 7 October 2026
+
+- Delivered a built Node.js 24 standalone external MCP client with local PKCE
+  pairing, private credential files, verified replacement, automatic renewal,
+  bound idle launch, stable-key sends, durable reads, cancellation/interruption,
+  pending-question operations, and same-token reconnect. Lifecycle callers persist
+  send key plus credential session ID and provide uncertainty reconciliation.
+- Handover pauses dispatch, drains requests, and retains uncertainty after a lost
+  mutation response. Failed replacement keeps the valid old credential. Shutdown
+  drains handover; incomplete auth cleanup reports non-secret operator references.
+- Verification: frozen-lockfile install, 16 focused tests, `pnpm typecheck`,
+  `pnpm build`, and `git diff --check` passed. Independent review's two required
+  findings were corrected in one pass; fresh closure found no remaining defects.
+- Live standalone built-client proof used isolated T3 on loopback 3873 and a
+  disposable repository. Idle launch returned a confirmed worktree. Repeated send
+  returned identical message/run IDs. The same active run survived replacement,
+  follow-up completed in the same thread, and a fresh transport read it afterwards.
+- Installed status: client candidate only. No Linear app, bridge HTTP listener,
+  host service, or Funnel installed. Existing T3 and host configuration untouched.
+  Isolated instance stopped; test credentials revoked and temporary secrets removed.
+- Pending checks: workstream 3 owns SQLite intent and reconciliation integration;
+  external question answers and controlled isolated-server restart remain live
+  checks before whole-feature acceptance. Linear installation, public ingress,
+  and development PR proof still require G1–G3. No optional observations or drift.
+- Concrete exports, commands, and live references are in the accepted
+  [workstream 1 handoff](01-t3-connection.md#implementation-handoff).
+
 ## External validation gates
 
 | Gate | Owner and placement | Status | Candidate/evidence | Resume condition |
@@ -123,3 +152,4 @@ lasting decision in its handoff/log and removes the resolved entry.
 | Date | Decision or drift | Reason | Approved by | Affected workstreams |
 |---|---|---|---|---|
 | 2026-10-07 | Sequential first-version workflow; explicit account and installation gates | New service; no live Linear installation exists | Aidan, 7 October 2026 | 1–4 |
+| 2026-10-07 | Workstream 1 accepted without specification drift | Standalone live proof and focused checks passed; failure cleanup and lifecycle races corrected before fresh closure | Workstream 1 lead under approved scope | 1–3 |
