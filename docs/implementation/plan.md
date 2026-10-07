@@ -1,6 +1,6 @@
 # First-version implementation plan
 
-Status: approved by Aidan on 7 October 2026; workstreams 1 and 2 are accepted.
+Status: approved by Aidan on 7 October 2026; workstreams 1–3 are accepted.
 
 ## Orchestration record
 
@@ -18,7 +18,7 @@ Status: approved by Aidan on 7 October 2026; workstreams 1 and 2 are accepted.
 |---|---|---|---|
 | 1 | [Standalone T3 connection](01-t3-connection.md) | Approved handoff | Accepted |
 | 2 | [Linear installation and event receipt](02-linear-installation.md) | 1 | Accepted |
-| 3 | [Session execution and recovery](03-session-lifecycle.md) | 1, 2 | Not started |
+| 3 | [Session execution and recovery](03-session-lifecycle.md) | 1, 2 | Accepted |
 | 4 | [Host installation and live development PR](04-installation-validation.md) | 3 | Not started |
 | Final | [Whole-feature review](final-review.md) | 1–4 accepted | Not started |
 
@@ -220,6 +220,74 @@ instance. Final review runs the package's actual test, typecheck, and build scri
   changes, coding dispatch, push or merge authorization. Exact HTTP response
   duration remains unverified under the approved evidence adjustment above.
 
+### Workstream 3, accepted 7 October 2026
+
+- Delivered a runnable Node 24 composition with exact Linear-project/T3-title
+  routing, pinned project/thread identities, one global coding slot, a durable
+  queue and ordered same-thread follow-ups. Missing/duplicate project selection
+  asks for clarification; correcting it resumes the same session. Unavailable
+  targets fail without rerouting. Saved thread bindings are checked before work.
+- SQLite retains session/input state, outgoing mutation inputs, request keys and
+  OAuth-session identities before sends, then returned IDs. Lost launch/send
+  responses reconcile exact durable thread/message/run identities; ambiguous
+  outcomes pause dispatch. Renewal uses that same reconciler. Restart restores
+  known work before queued sessions. Reporting has stable UUIDs, ordered retries
+  and a forwarding cursor, and never repeats coding work to recover a report.
+- Native questions accept supported answers on the original thread. Permission
+  approvals remain in T3. Linear's documented `agentActivity.signal: "stop"`
+  and explicit stop requests cancel queued input/runs and interrupt the
+  active run by pinned ID. Ordinary replies cannot restart stopped work; explicit
+  `/resume` is required. Ten-minute public heartbeats and confirmed final outcomes
+  exclude reasoning/activity/raw command items. Investigations can finish without
+  a PR; PR URLs are reported and added to session links when present.
+- Verification: 15 focused session tests, all 38 package tests, typecheck, build
+  and tracked/untracked whitespace checks passed. Independent review found two
+  required corrections, saved-thread binding before follow-ups and crash-safe
+  continuation after a final-report commit. One remediation pass and fresh focused
+  closure passed; the lead reran package tests/typecheck/build. No remaining
+  required findings, optional observations or specification drift.
+- Live isolated evidence used T3 `0.0.46-nightly.20261007.2761` on loopback 3973
+  with disposable repositories under `/tmp/t3-linear-ws3-dev`, without Linear
+  account calls. Native request `{test_word: "blue"}` returned sequence 25;
+  thread `mcp:14b46127-e4ee-4ac0-89d0-34cea136a1b7` completed ordinal-1 run at
+  `2026-10-07T12:35:34.815Z` with `QUESTION ANSWER RECEIVED blue`.
+- Synthetic local receipts then drove the real service/client across two isolated
+  projects serially. A deliberately discarded accepted send response retained
+  session `ws3-rotation-2`, thread `mcp:b1f949c0-6194-4b08-be55-f16ed3562689`,
+  its stable key and old OAuth namespace. Reconciliation adopted the exact durable
+  message and ordinal-1 run with one send. Replacement credential read the same
+  still-active harmless run. After isolated T3 restart and SQLite reopen, the same
+  thread completed ordinal-2 follow-up with `RESTART FOLLOWUP OK`; replay preserved
+  two launches and three sends. Exact IDs and non-secret evidence references are
+  in the [workstream 3 handoff](03-session-lifecycle.md#implementation-handoff).
+  Live probes precede the final formatting/report-order/binding/continuation
+  guards, whose focused synthetic checks passed.
+- Cleanup: seven isolated repository/worktree statuses remained clean. Isolated
+  bearer sessions and pairing grants reached zero; saved bearer returned 401,
+  then its file was removed. The isolated process stopped and its log was removed.
+  Existing T3, private configuration, Linear app/store/secrets, existing issue,
+  stopped owner bridge/Funnel and host services were untouched. No push or PR.
+- Installed status: runnable local candidate only. `pnpm build` then explicitly
+  configured `pnpm start` composes HTTP on loopback 8787; `node dist/main.js status`
+  and `retry-reports` provide operator inspection and reporting recovery. Required
+  files are private `linear-secrets.json`, `t3.json`, `bridge.sqlite`, and explicit
+  provider/model/repository/base-branch configuration in `sessions.json`. SIGINT
+  and SIGTERM drain service operations and preserve independent T3 coding work.
+  No persistent bridge or coding integration is installed.
+- Pending external checks and lasting workstream 4 handoff: G2 must authorize
+  permanent host/public endpoint changes; use only the accepted edge listener
+  during its ingress check. Before composed startup under G3, Aidan must authorize
+  repository/base/test issue and dispatch scope and settle the retained unconsumed
+  G1 AID-6 receipt. Its initial acknowledgement is not coding authorization.
+  Preserve signed receipt/activity evidence and do not dispatch or post further
+  activities to that old session without an explicit decision. G3 then proves
+  unattended editing/checks/push/draft-PR permission and actual Linear-to-PR flow.
+  No supported user-accessible T3 conversation URL was established. Native answer
+  and controlled restart checks are complete; live Linear Stop UI was not
+  generated, its shape is verified from official docs and SDK. G1 exact HTTP
+  duration remains unverified under the approved evidence adjustment; five-second
+  HTTP and ten-second initial-activity deadlines are unchanged.
+
 ## External validation gates
 
 | Gate | Owner and placement | Status | Candidate/evidence | Resume condition |
@@ -254,3 +322,4 @@ None.
 | 2026-10-07 | Existing-UUID live reconciliation passes; G1 remains blocked without specification drift | One explicitly authorized call resolved and API retained exactly one original activity; successful HTTP telemetry unavailable through retained local state or installed-app API; owner evidence decision and cleanup remain | Aidan authorized scoped call; workstream 2 reconciliation lead | 2–4 |
 | 2026-10-07 | Approved G1 evidence adjustment; runtime requirements unchanged; only owner cleanup blocks acceptance | Aidan accepts observed prompt response and verified 1.772 s activity timestamps; exact HTTP duration remains unverified; no timing logging or telemetry request required | Aidan, "Yeah do that and if I start seeing timeout errors I'll revisit it"; workstream 2 gate-closure lead | 2–4 |
 | 2026-10-07 | Workstream 2 and G1 accepted; approved responsiveness evidence adjustment retained, runtime requirements unchanged | Owner cleanup verified read-only at 12:19 UTC; temporary 8443/8787 removed, private T3 443 unchanged and private store/secrets retained; prior reviewed candidate and live proof reused | Aidan supplied cleanup answer and evidence approval; workstream 2 acceptance lead | 2–4 |
+| 2026-10-07 | Workstream 3 accepted without specification drift; retained G1 receipt disposition handed to G3 | Isolated native answer, lost-send handover and restart evidence passed; two required lifecycle corrections passed one remediation and fresh closure; permanent service/Linear-to-PR proof await G2/G3 | Workstream 3 lead under approved scope | 3–4 |

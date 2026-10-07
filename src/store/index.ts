@@ -3,6 +3,7 @@ import { mkdirSync, lstatSync, openSync, closeSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { eventSchema, type AgentEvent } from "../linear/events.ts";
+import type { Session, Intent, Report } from "../sessions/types.ts";
 
 export type Installation = {
   workspaceId: string; appUserId: string; clientId: string;
@@ -33,7 +34,10 @@ export class Store {
       CREATE TABLE IF NOT EXISTS installation (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS oauth_state (hash TEXT PRIMARY KEY, verifier TEXT NOT NULL, expires_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS receipts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, delivery_id TEXT UNIQUE NOT NULL, event TEXT NOT NULL, consumed INTEGER NOT NULL DEFAULT 0);
-      CREATE TABLE IF NOT EXISTS initial_activities (session_id TEXT PRIMARY KEY, activity_id TEXT UNIQUE NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, next_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending');`);
+      CREATE TABLE IF NOT EXISTS initial_activities (session_id TEXT PRIMARY KEY, activity_id TEXT UNIQUE NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, next_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending');
+      CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS intents (id TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, value TEXT NOT NULL);`);
   }
   close() { this.db.close(); }
   installation(): Installation | undefined {
@@ -71,8 +75,25 @@ export class Store {
     return this.db.prepare("SELECT session_id,activity_id,attempts FROM initial_activities WHERE status='pending' AND next_at<=? ORDER BY next_at").all(now).map(row => ({ sessionId: String(row.session_id), activityId: String(row.activity_id), attempts: Number(row.attempts) }));
   }
   activitySent(id: string) { this.db.prepare("UPDATE initial_activities SET status='sent' WHERE activity_id=?").run(id); }
+  initialActivityStatus(sessionId: string) {
+    const row = this.db.prepare("SELECT status FROM initial_activities WHERE session_id=?").get(sessionId);
+    return row ? String(row.status) : undefined;
+  }
   activityFailed(id: string, attempts: number, now = Date.now()) {
     this.db.prepare("UPDATE initial_activities SET attempts=?,next_at=?,status=? WHERE activity_id=?").run(attempts, now + Math.min(60_000, 1000 * 2 ** (attempts - 1)), attempts >= 6 ? "failed" : "pending", id);
   }
   retryFailedActivities() { this.db.prepare("UPDATE initial_activities SET status='pending',attempts=0,next_at=0 WHERE status='failed'").run(); }
+  // Lifecycle updates and receipt consumption share a transaction. A crash cannot lose input.
+  transaction<T>(update: () => T): T {
+    this.db.exec("BEGIN IMMEDIATE");
+    try { const result = update(); this.db.exec("COMMIT"); return result; }
+    catch (error) { this.db.exec("ROLLBACK"); throw error; }
+  }
+  sessions(): Session[] { return this.db.prepare("SELECT value FROM sessions").all().map(row => JSON.parse(String(row.value)) as Session).sort((a, b) => a.order - b.order); }
+  saveSession(value: Session) { this.db.prepare("INSERT INTO sessions VALUES (?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value").run(value.id, JSON.stringify(value)); }
+  intents(): Intent[] { return this.db.prepare("SELECT value FROM intents").all().map(row => JSON.parse(String(row.value)) as Intent); }
+  saveIntent(value: Intent) { this.db.prepare("INSERT INTO intents VALUES (?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value").run(value.id, JSON.stringify(value)); }
+  reports(): Report[] { return this.db.prepare("SELECT value FROM reports ORDER BY rowid").all().map(row => JSON.parse(String(row.value)) as Report); }
+  saveReport(value: Report) { this.db.prepare("INSERT INTO reports VALUES (?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value").run(value.id, JSON.stringify(value)); }
+  retryReports() { for (const report of this.reports().filter(item => item.status === "failed")) this.saveReport({ ...report, status: "pending", attempts: 0, nextAt: 0 }); }
 }

@@ -11,7 +11,8 @@
     "test": "node --test test/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
-    "t3": "node dist/t3/cli.js"
+    "t3": "node dist/t3/cli.js",
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "@linear/sdk": "^97.0.0",

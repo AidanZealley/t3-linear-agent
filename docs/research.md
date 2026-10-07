@@ -136,10 +136,9 @@ Source: [Environment authentication](https://github.com/pingdotgg/t3code/blob/ma
 - A fresh MCP transport connection using the same OAuth token could read the
   existing thread and its history.
 - `t3_pending_request_list` and `t3_pending_request_read` exposed a live agent
-  question with its ID and choices. The response tool was present, but a nested
-  answer payload was rejected. The question was answered through another path
-  before a corrected response could be tested, so external answer submission is
-  not yet verified. T3's fixture uses an answer map of question ID to string.
+  question with its ID and choices. This initial probe rejected a nested answer
+  payload. Workstream 3 later verified the supported flat question-ID-to-string
+  map externally in an isolated instance, as recorded below.
 - Revoking the investigation's OAuth sessions caused the saved token to receive
   HTTP 401 on `/mcp`.
 
@@ -172,8 +171,41 @@ cleanup/shutdown corrections, whose focused closure checks passed.
 
 Concrete contracts and live references are in the
 [accepted workstream 1 handoff](implementation/01-t3-connection.md#implementation-handoff).
-External question answers, lifecycle reconciliation, and controlled server restart
-remain later checks; this evidence does not establish an installed Linear service.
+Workstream 3 subsequently verified external question answers, lifecycle
+reconciliation, and controlled server restart below. The workstream 1 evidence
+does not establish an installed Linear service.
+
+### Accepted session lifecycle validation
+
+Workstream 3 was accepted on 7 October 2026 after independent review, one
+remediation pass and focused closure. Fifteen lifecycle tests and all 38 package
+tests passed, with typecheck and build. Saved bindings are checked before coding
+sends, and final-report commits retain runnable pending follow-ups across crashes.
+
+An isolated T3 instance on loopback 3973 accepted a native external question answer
+as `{ "test_word": "blue" }`, returned sequence 25 and completed with
+`QUESTION ANSWER RECEIVED blue`. Local receipts drove the real lifecycle/client
+across two disposable projects serially. Deliberately losing an accepted send
+response reconciled its exact durable message ID before credential replacement,
+keeping the same active run and one task message. Stopping and restarting that
+isolated instance, then reopening SQLite and reconnecting, recovered the original
+project/thread/worktree and completed a same-thread follow-up. Exact IDs and
+evidence references are in the [workstream 3 handoff](implementation/03-session-lifecycle.md#implementation-handoff).
+
+The installed server requires omitted absent cursors, limits `runLimit` to 50
+and `maxCharsPerItem` to 50000, and exposes `assistant_message` public output.
+Its durable MCP message ID encodes the OAuth session and caller request key,
+allowing exact uncertain-send reconciliation. Official
+[Linear signals](https://linear.app/developers/agent-signals) and SDK 97.0.0 confirm
+a prompted event carries `agentActivity.signal: "stop"` and prompt
+`agentActivity.content.body`. No new live Linear Stop UI activity was generated.
+
+Isolated credentials and grants were revoked, the process stopped and all fixture
+worktrees remained clean. Existing T3 and private Linear installation were
+untouched; no push or PR occurred. Later local guards passed focused checks.
+Permanent installation and real Linear-to-development-PR evidence still require
+G2 and G3. The retained G1 receipt needs explicit owner disposition before
+composed-service startup; it is not new coding authorization.
 
 ### Constraints that affect implementation
 
@@ -196,9 +228,10 @@ The question probe also showed that a run can report `running` while a pending
 question exists. Check pending requests separately when reporting waiting for
 input in Linear.
 
-Reconnect was tested; restarting the user's live T3 server was not. Recovery
-across a real server restart, lost launch responses, external question answers,
-and a supported conversation URL still need verification during the build.
+The user's live T3 server was not restarted. Workstream 3 later proved recovery
+across an isolated T3 restart, uncertain-send handover and external question
+answers. Lost launch responses passed focused synthetic lifecycle checks.
+A supported user-accessible conversation URL remains unestablished.
 
 Sources: [External invocation context](https://github.com/pingdotgg/t3code/blob/main/apps/server/src/mcp/McpInvocationContext.ts),
 [Question fixture](https://github.com/pingdotgg/t3code/blob/main/apps/server/src/orchestration-v2/testkit/fixtures/plan_questions/input.ts).
@@ -279,12 +312,12 @@ Source: [Symphony architecture and maturity](https://github.com/kamo62/neokod/bl
 
 ## Decisions still requiring evidence
 
-1. Connect lifecycle reconciliation for uncertain launches and sends, verify
-   external pending-question responses, and prove recovery after an actual T3
-   restart in a controlled development environment. Standalone credential renewal
-   and active-run replacement passed workstream 1 validation.
-2. Verify current Linear SDK event types, OAuth token refresh, stop signals, and
-   clarification response shapes during the Linear integration phase.
+1. Permanent installation and actual Linear-to-development-PR flow remain
+   unverified. Workstream 3 completed lifecycle reconciliation checks, external
+   native answers, active-run lost-send credential handover and isolated T3 restart.
+2. Current Linear SDK event types, OAuth refresh and documented stop shapes are
+   checked. The actual Stop UI webhook was not generated; a supported
+   user-accessible T3 conversation URL remains unestablished.
 3. Deploy the bridge behind a separate Tailscale Funnel listener and verify a
    signed Linear webhook reaches it without making T3 public.
 4. Verify repository credentials and T3 permissions with a development PR. Local
