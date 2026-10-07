@@ -5,6 +5,19 @@ questions. Proposed product behaviour belongs in [the specification](spec.md).
 
 ## What has been verified
 
+### Installed bridge and development PR
+
+On 7 October 2026, the approved AID-7 delegation reached the installed bridge
+through a fresh signed public webhook and completed one T3-managed worktree run.
+Exactly one documentation-only [draft PR #1](https://github.com/AidanZealley/t3-linear-agent/pull/1)
+targets main. Actual diff and whitespace checks pass. Linear carries progress,
+final response and external PR URL; the calling T3 conversation registers the PR.
+Bridge-only restart retained all receipt/activity/session/intent/report rows and
+the same thread/worktree/run/PR without dispatch. Private T3 stayed running.
+Exact identities, permissions and evidence are in the
+[workstream 4 handoff](implementation/04-installation-validation.md#implementation-handoff).
+
+
 ### Linear supports self-hosted custom agents
 
 Linear documents agents installed as OAuth app users with `actor=app`,
@@ -252,9 +265,9 @@ T3's private Serve listener on 443. The bridge's HTTP listener should expose onl
 its webhook and OAuth routes and verify Linear signatures itself. Funnel does not
 make a request trusted merely because it reaches the server.
 
-No Funnel listener was enabled and no Tailscale settings were changed. Public
-reachability and delivery from Linear remain untested. The exact hostname and
-installation command should be recorded when the service is deployed.
+At this pre-installation snapshot no Funnel listener was enabled. Workstream 4
+later verified public DNS/TLS and fresh signed Linear delivery on bridge 8443,
+with private T3 443 unchanged; exact installation details are in the plan.
 
 Sources: [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel),
 [Webhook example](https://tailscale.com/docs/reference/examples/funnel).
@@ -312,16 +325,16 @@ Source: [Symphony architecture and maturity](https://github.com/kamo62/neokod/bl
 
 ## Decisions still requiring evidence
 
-1. Permanent installation and actual Linear-to-development-PR flow remain
-   unverified. Workstream 3 completed lifecycle reconciliation checks, external
+1. Permanent installation and actual Linear-to-development-PR flow passed the
+   approved AID-7 test. Workstream 3 completed lifecycle reconciliation checks, external
    native answers, active-run lost-send credential handover and isolated T3 restart.
 2. Current Linear SDK event types, OAuth refresh and documented stop shapes are
    checked. The actual Stop UI webhook was not generated; a supported
    user-accessible T3 conversation URL remains unestablished.
-3. Deploy the bridge behind a separate Tailscale Funnel listener and verify a
-   signed Linear webhook reaches it without making T3 public.
-4. Verify repository credentials and T3 permissions with a development PR. Local
-   filesystem access alone does not establish unattended push and PR creation.
+3. Public signed delivery and bridge restart passed on separate Funnel 8443;
+   private T3 443 remains unchanged.
+4. The approved development test proves unattended topic push and draft PR
+   creation. No merge, deployment or integration-branch push was authorized.
 
 No existing turnkey bridge to this T3 server was found in the public searches.
 That is a search result, not proof that none exists. Model inference remains with

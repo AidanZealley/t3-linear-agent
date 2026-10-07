@@ -19,7 +19,7 @@ Status: approved by Aidan on 7 October 2026; workstreams 1–3 are accepted.
 | 1 | [Standalone T3 connection](01-t3-connection.md) | Approved handoff | Accepted |
 | 2 | [Linear installation and event receipt](02-linear-installation.md) | 1 | Accepted |
 | 3 | [Session execution and recovery](03-session-lifecycle.md) | 1, 2 | Accepted |
-| 4 | [Host installation and live development PR](04-installation-validation.md) | 3 | Not started |
+| 4 | [Host installation and live development PR](04-installation-validation.md) | 3 | Accepted |
 | Final | [Whole-feature review](final-review.md) | 1–4 accepted | Not started |
 
 Allowed statuses: Not started, Implementing, Review, Remediation, Closure review,
@@ -288,13 +288,249 @@ instance. Final review runs the package's actual test, typecheck, and build scri
   duration remains unverified under the approved evidence adjustment; five-second
   HTTP and ten-second initial-activity deadlines are unchanged.
 
+### Workstream 4, installed G2/G3 evidence verified, 7 October 2026
+
+- Recovery audited the complete diff, branch and recorded starting commit. HEAD
+  was accepted workstream 3 `d35e6e4aae64827c286757e7f12cb494b3f00480`;
+  the only interrupted change was row 4 Implementing. All subsequent changes are
+  attributable to this workstream: deployment files, README operator instructions,
+  packet implementation/review records and this plan. No overlapping work exists.
+- Delivered candidate uses one edge-only systemd user unit, with a separate
+  lifecycle drop-in reserved for G3. User lingering is already enabled, so the
+  service can survive logout and start at boot. Secrets/state remain private in
+  the retained directory; direct Node execution, existing SQLite and accepted CLI
+  discovery avoid extra installation machinery.
+- README covers OAuth, matching project names, private configuration, renewal,
+  uncertain requests, reports, logs, bridge restart and exact scoped rollback.
+  Candidate preserves private T3 Serve 443 and publishes only bridge 8443 after
+  authorization. No source changes or new dependencies were needed.
+- Verification: build, base and merged lifecycle systemd unit validation,
+  tracked/untracked whitespace checks and compiled-entrypoint checks passed.
+  Independent review and a different fresh closure found no Required, Optional
+  or Question findings. Lead confirmed gate boundaries and repeated base-unit
+  and diff verification. No remediation pass was needed.
+- Lasting owner decision: Aidan chose owner-run installation of the reviewed
+  candidate. Agents have read-only verification permission, with no authority to
+  change, restart or roll back the bridge or Funnel. His supplied status reports
+  enabled/active service since 17:05:06 BST, PID 795670. No agent host mutation,
+  account call or coding startup occurred.
+- Installed status verified independently at 16:07:10–16:07:20 UTC: installed
+  unit exactly matches `deploy/t3-linear-agent.service`, is owner-held mode 0600,
+  has no drop-in and runs
+  `dist/linear/cli.js`. It is enabled/active, PID 795670, `NRestarts=0`, bound only
+  to 127.0.0.1:8787. Lingering remains enabled. Private state directory and
+  Linear secret/store modes are 0700/0600/0600. `t3.json`, `sessions.json`,
+  `service.env` and installed `lifecycle.conf` are absent.
+- Serve/Funnel retain private 443 to 127.0.0.1:3773. Only 8443 is public, proxying
+  to 127.0.0.1:8787. `t3code.service` remains enabled/active, PID 1576, active
+  since 30 September 2026 06:38:23 BST. Local T3 OAuth metadata returns 200.
+- Public DNS queries to 1.1.1.1 and 8.8.8.8 return NOERROR with relay IPs
+  176.58.88.82, 176.58.88.108 and 176.58.92.199. Normal TLS HTTPS pinned to each
+  relay returns 401 for `/oauth/start`, 404 for `/mcp` and 404 for an unrelated
+  path. All nine requests report TLS verification 0 and the expected remote IP.
+  These probes use public relays directly, without MagicDNS or insecure TLS.
+- Read-only commands included `cmp deploy/t3-linear-agent.service
+  /home/aidanzealley/.config/systemd/user/t3-linear-agent.service`,
+  `systemctl --user show t3-linear-agent.service`, `systemctl --user show
+  t3code.service`, `loginctl show-user aidanzealley -p Linger`, socket `ss`,
+  permission-only `stat`, and both Serve/Funnel JSON status commands. DNS used
+  `dig @1.1.1.1` and `dig @8.8.8.8` for the registered hostname. Each public GET
+  used `curl --noproxy '*' --resolve HOST:8443:RELAY_IP --connect-timeout 10
+  --max-time 20`, the registered HTTPS hostname, and status/TLS/remote-IP output
+  only. No webhook POST, callback, credentials or authenticated API was invoked.
+- Private SQLite projections using Python `sqlite3`, URI `mode=ro` and
+  `PRAGMA query_only=ON` at 16:06:59 UTC retain two unconsumed receipts. G1
+  sequence 1 remains unchanged. Historical prompted sequence 2, delivery
+  `b1053f02-dc94-4fcb-a173-7fdda446b5cd`, signed timestamp
+  `2026-10-07T12:14:08.406Z`, belongs to the same AID-6 session
+  `59f7671f-3e94-4474-ac86-62ab0b1ad95d` and matches all installed identities.
+  Both precede this service installation and cannot prove delivery to it. The
+  sole initial activity remains `13e5f555-1e22-4d0b-be66-864ac6625923`, sent,
+  attempts 0, unchanged `next_at=1791373303153`. Sessions/intents/reports are
+  all empty. No token, signing secret, raw body or activity call was exposed.
+- Recovery verified complete diff attribution to this workstream and reused sound
+  independent review/closure. Candidate and installed unit checks plus
+  `git diff --check` pass; no code correction or further review loop is needed.
+- Lasting signed-reply handoff: Aidan reported "I sent it" for the instructed
+  existing-session reply. Read-only SQLite at `2026-10-07T16:13:26.431986Z`
+  verifies sequence 3, delivery `1545e836-2e56-419b-aa86-634d7434871e`, type
+  `AgentSessionEvent`, action `prompted`, signed timestamp
+  `2026-10-07T16:11:30.312Z`, on existing AID-6 session
+  `59f7671f-3e94-4474-ac86-62ab0b1ad95d`, issue
+  `4fa68d65-fd0c-4184-aa63-352e00c027ee`. Prompt activity
+  `aa18433d-79cd-4305-b971-54c13f370832` names that same session and contains
+  exactly `Installation receipt check only. Do not start coding.`
+  Signed time is after installed-service startup `2026-10-07T16:05:06Z`.
+  Workspace `3afa0fa8-1d2b-42ae-97d6-4c78c0e04062`, app user
+  `bce8f748-3b4b-462d-91c4-dba29d01fa84` and client
+  `f9fb74f937104357c1922e3613101ea9` match the installed identity, including
+  nested session workspace/app user. This proves fresh signed public delivery
+  through the reviewed signature/timestamp/identity-validated HTTP path, with
+  earlier public DNS/TLS evidence retained. Raw signature/body are not retained.
+- Pre-restart baseline at 16:13 UTC: bridge enabled/active/running, PID 795670,
+  `ExecMainStartTimestamp=Wed 2026-10-07 17:05:06 BST`,
+  `ExecMainStartTimestampMonotonic=642425996413`, `NRestarts=0`, no drop-in,
+  exact reviewed unit and edge entrypoint. Read-only SQLite uses URI `mode=ro`,
+  `PRAGMA query_only=ON`, and a read transaction for identity/receipt/activity/
+  lifecycle projections. All three receipt rows remain `consumed=0`.
+  The table below records exact serialized-event SHA-256 baselines for restart
+  comparison, preserving complete event equality without copying private context.
+
+  | Sequence | Delivery UUID | Action | Signed timestamp | Event SHA-256 |
+  |---|---|---|---|---|
+  | 1 | `76a7ed6f-fc0d-4399-ad28-803aaadc7b08` | created | `2026-10-07T11:41:42.846Z` | `16411760944abd062595f80085d9a9fd444c09491d9034af5e8d197ac73d5d80` |
+  | 2 | `b1053f02-dc94-4fcb-a173-7fdda446b5cd` | prompted | `2026-10-07T12:14:08.406Z` | `76ab9b7e91b101d6b7df3d5c7ced0310ebdf6e1924e998734d4803e26a02d167` |
+  | 3 | `1545e836-2e56-419b-aa86-634d7434871e` | prompted | `2026-10-07T16:11:30.312Z` | `747e43546c39a4a2d3878455157edc6b1b73a8dda1b9dcae7df263ad94a26d2f` |
+
+- Original initial activity row remains session
+  `59f7671f-3e94-4474-ac86-62ab0b1ad95d`, UUID
+  `13e5f555-1e22-4d0b-be66-864ac6625923`, status `sent`, attempts 0,
+  `next_at=1791373303153`. There is exactly one activity row and zero rows in
+  each of sessions/intents/reports. No new activity, session, T3 operation or
+  receipt consumption occurred. State/secret modes remain 0700/0600/0600;
+  sockets stay loopback-only. Private T3 remains active, PID 1576, since
+  30 September 06:38:23 BST; unauthenticated metadata is 200. Serve/Funnel
+  still publish only bridge 8443, with private T3 443 to loopback 3773 unchanged.
+- Resolved owner restart decision from `G2-INSTALL-2026-10-07`: Aidan said
+  "Ran those now" after the exact `systemctl --user restart
+  t3-linear-agent.service`, service status and is-enabled commands. Read-only
+  verification at 16:18:49 to 16:19:30 UTC passes. Bridge PID changed from
+  795670 to 797348; start changed from `16:05:06Z` to `16:16:54Z`, monotonic
+  from 642425996413 to 643133871158. It is enabled/active/running,
+  `NRestarts=0`, no drop-in, with the exact reviewed edge-only unit. This
+  preserves the owner-run boundary; agents cannot mutate host services or Funnel.
+- Post-restart SQLite snapshot at `2026-10-07T16:19:18.732708Z`, using URI
+  `mode=ro`, query-only and one read transaction, matches all three receipt
+  sequences, UUIDs, timestamps, identities and exact hashes in the table above.
+  All remain `consumed=0`. Exactly one initial activity remains with original
+  UUID/session, `sent`, attempts 0 and `next_at=1791373303153`; sessions/intents/
+  reports each have zero rows. No acknowledgement or coding was duplicated.
+- State/secret/store permissions remain 0700/0600/0600; installed unit is 0600.
+  T3 credential, session configuration, runtime file and lifecycle drop-in remain
+  absent. T3 stays enabled/active, PID 1576, start 30 September 06:38:23 BST,
+  monotonic 23221278, with OAuth metadata HTTP 200. Private 443 still proxies
+  to loopback 3773; only public 8443 proxies to loopback 8787.
+- Fresh delegated read-only verification independently confirms branch/base,
+  complete diff ownership, exact installed unit, retained state and ingress.
+  Unit validation and tracked/untracked whitespace checks pass. Prior candidate
+  review/closure remain sound; no code or deployment correction was needed.
+- A fresh focused handoff check found no G2/G3 boundary gap. Its observation
+  that the workflow README still describes the original pre-implementation
+  baseline is outside this gate recovery; the frozen workflow and historical
+  review records remain intact. It does not affect gate evidence or authority.
+- G2 Passed. Workstream 4 stays Blocked on `G3-DEVELOPMENT-2026-10-07` before
+  pairing, configuration, retained-input mutation, composition or coding.
+  G1's approved responsiveness evidence adjustment remains in force, with
+  runtime deadlines unchanged. No drift. Work remains uncommitted.
+
+- Approved G3 decision, resolved into this lasting handoff: Aidan said "do it"
+  to the exact proposal and authorized the lead-run narrow transition. This
+  supersedes the earlier G2 owner-run boundary only for private backup, exact
+  receipts 1/2/3 disposition, T3 pairing, private configuration, reviewed lifecycle
+  override and bridge-only stop/start/restart needed for readiness and recovery.
+  Funnel and the existing T3 service remain outside that authority. The approved
+  test permits one isolated worktree from `main`, only `docs/bridge-validation.md`,
+  meaningful checks, one topic-branch push and one draft PR in
+  `AidanZealley/t3-linear-agent`. Initial fresh Linear issue and delegation remain
+  owner-run. AID-6 is never coding authorization.
+- Fresh delegated baseline at `2026-10-07T16:28:59.575531Z` passed exact
+  receipt hashes and identities above, original sent activity, empty lifecycle,
+  reviewed edge service PID 797348 and absent G3 files. Main, origin/main and
+  remote `refs/heads/main` all equal
+  `b47c831c3c2ac8434758934fd860c60423025b58`. GitHub authenticated readiness
+  confirms SSH protocol, repository scope, default main and push/admin permission.
+  Actual push/PR permission remains subject to the approved end-to-end test.
+- Lead named exact host/private items before touching them, stopped only the
+  bridge and made private mode-0700 backup
+  `/home/aidanzealley/.local/state/t3-linear-agent/backup-g3-20261007T162939Z`,
+  with copied files mode 0600. Stopped-state compare passed the exact three
+  UUID/hash/session baselines, original activity and empty lifecycle. Only
+  `Store.consumeEvent(1)`, `(2)`, `(3)` ran in one transaction. Receipt rows,
+  event hashes, installation and original activity were preserved.
+- Private `T3_RUNTIME_MODE=full-access pnpm t3 pair` succeeded without printing
+  pairing material or bearer. Live catalog returned exactly one title match
+  `t3-linear-agent`, project `12d819d1-ac0b-46a7-8f03-23d44601ee04`, workspace
+  `/home/aidanzealley/code/t3-linear-agent` and approved GitHub identity. Catalog
+  contains provider `codex` and model `gpt-6.1-sol`; no substitute was used.
+  Credential endpoint and full-access ceiling were checked without exposing secrets.
+- Created mode-0600 `sessions.json` for only that project/root, `baseRef=main`,
+  approved provider/model, plus mode-0600 `service.env` containing
+  `T3_RUNTIME_MODE=full-access`. Installed only reviewed `deploy/lifecycle.conf`
+  at `/home/aidanzealley/.config/systemd/user/t3-linear-agent.service.d/lifecycle.conf`,
+  reloaded the user manager and started only the bridge. It reports active/running,
+  PID 799376, start `2026-10-07T16:30:16Z`, `NRestarts=0`. Independent readiness
+  verification is in progress. No fresh issue, T3 coding thread, push or PR has
+  been created. G3 Testing, not Passed; owner delegation and actual PR/recovery
+  proof remain required. No drift.
+
+- Fresh independent readiness reviewer found no Required, Optional or Question
+  findings. It independently confirmed deployed candidate equality, enabled/active
+  composed service, full-access process runtime, restrictive private files,
+  unchanged installation/activity and receipt bytes with only consumed 0 to 1
+  for sequences 1/2/3, empty lifecycle, exact catalog target/model, authenticated
+  GitHub SSH and main readiness. T3/private ingress remain unchanged. Available
+  `list_thread_pull_requests` returned no links; no PR was worked on. No meaningful
+  implementation correction or new review loop is needed. Prior candidate
+  review/closure remains valid. `git diff --check` passes.
+- Resolved `G3-DEVELOPMENT-2026-10-07` into the lasting approved authority and
+  transition handoff above. Row 4 is Blocked only on the owner initial fresh issue
+  and single delegation under `G3-OWNER-DELEGATION-2026-10-07`. No commit is made
+  while blocked. G3 remains Testing until actual PR/link/recovery proof passes.
+
+- Resolved owner delegation `G3-OWNER-DELEGATION-2026-10-07`: Aidan supplied
+  https://linear.app/aidan-zealley/issue/AID-7/add-bridge-validation-note after
+  once-only delegation instructions. Read-only SDK verified issue
+  `b1b3c2fc-411e-499a-95fa-1c79ad304794`, exact project `t3-linear-agent`
+  `9f92b9d0-df1b-41de-894f-c19828253a3f`, T3 delegate and approved one-file task.
+  Fresh signed created sequence 4, delivery `dc8769b9-38cd-4ca9-aced-958ba7e98355`,
+  timestamp `2026-10-07T16:35:57.824Z`, session
+  `4d767411-1b94-4b59-8043-34e870a30b14`, matches installed identities; SHA-256
+  `f0cc2b3a399aec4107ce6a3de1d181898e8c893bc2cb971f11eb9649516a8cb6`.
+  Receipts 1/2/3 and original activity retain their exact evidence; no old coding.
+- End-to-end: exactly one confirmed launch/send, matched T3 project
+  `12d819d1-ac0b-46a7-8f03-23d44601ee04`, thread
+  `mcp:605f3d54-4297-45a2-bc4f-4258b96303e5`, one completed ordinal-1 run at
+  `16:37:01.379Z`, no questions/pending inputs/uncertain intents. Managed worktree
+  `/home/aidanzealley/.t3/worktrees/t3-linear-agent/linear-aid-7-4d767411-1b94-4b59-8043-34e870a30b14`
+  uses branch `linear/aid-7-4d767411-1b94-4b59-8043-34e870a30b14` from approved main.
+  Supported [T3 conversation](t3-thread://v1/7ece0ca2-be22-4b03-bbf1-f8e4605a2b17/mcp%3A605f3d54-4297-45a2-bc4f-4258b96303e5).
+- Exactly one repository PR: [draft #1](https://github.com/AidanZealley/t3-linear-agent/pull/1),
+  open against `main`, only `docs/bridge-validation.md`, exact approved sentence,
+  one addition, head `5c03e7dfea60d699520e1a7014cc3ea0f8ad4f18`. Worktree clean;
+  actual diff inspected and `git diff --check main...HEAD` passed. Main is
+  documentation-only with no CI checks configured. Only test branch was pushed;
+  no integration push, merge, deployment, production access or extra dispatch.
+- Linear session is complete with PR external URL and visible initial/progress/
+  final activities. Initial UUID `e4a2ddeb-2b09-473d-8c5d-2d0c3227a6f1` at
+  `16:35:58.433Z`, 0.609 s after signed receipt; progress
+  `9841fd58-68c1-44fc-8dd7-81e3ed4bffac` at `16:35:59.610Z`; final
+  `39c08136-1536-4a1e-ade9-347b367efbc3` at `16:37:02.555Z` includes checks/PR.
+  PR registered immediately on observation with calling T3 thread
+  `64423b31-d5b3-49a6-bfd4-423c7d12f939`, `alreadyLinked=false`; lead repeated
+  with `alreadyLinked=true` and final list audit confirms exactly draft #1.
+  Coding thread native PR metadata remains null; no claim of that separate link.
+  The exposed link tool registers to the calling conversation.
+- Lead-run authorized bridge-only restart at `2026-10-07T16:38:33Z` changed PID
+  799376 to 800839, enabled/active/running, `NRestarts=0`. Read-only transactional
+  before/after snapshots match all rows exactly: receipts 4, initial activities 2,
+  sessions 1, intents 2, reports 2. No acknowledgement, coding or report duplicated.
+  After a bounded ten-second wait, same completed thread/run/worktree and one
+  linked draft PR remain. T3 stays PID 1576/start 30 September 06:38:23 BST;
+  OAuth metadata 200; private 443/3773 and only public bridge 8443/8787 unchanged.
+  No Funnel change or T3 restart. Temporary non-secret snapshot removed.
+- Recovery attribution/base checks pass; prior deployment review/closure reusable.
+  No application changes or implementation corrections. Fresh independent gate
+  evidence closure passes with no Required, Optional or Question findings. G1
+  approved timing adjustment remains unchanged. Workstream 4 Accepted; installed
+  composition retained, no external gate remains. Final whole-feature review next.
+
 ## External validation gates
 
 | Gate | Owner and placement | Status | Candidate/evidence | Resume condition |
 |---|---|---|---|---|
 | G1 Linear app setup | 2, after candidate checks, before live auth/event verification | Passed | OAuth actor, signed receipt, 1.772 s initial activity and existing-UUID reconciliation passed; owner cleanup verified at 12:19 UTC | Complete; private installation/store/secrets retained, temporary bridge/Funnel stopped |
-| G2 Host/public endpoint | 4, after reviewed deployment candidate, before applying it | Pending | Lead records exact service files, user, command, port, secret paths, Funnel changes, and rollback | Aidan authorizes these specific host changes; lead verifies public bridge and private T3 |
-| G3 Development issue and PR | 4, after G2, before dispatching coding work | Pending | Lead records selected repository/base branch, matched projects, proposed harmless issue, and allowed push/draft-PR actions | Aidan confirms target and test; lead verifies end-to-end result and records PR URL |
+| G2 Host/public endpoint | 4, after reviewed deployment candidate, before applying it | Passed | Owner-installed reviewed edge, fresh signed sequence 3 and owner bridge restart with exact retained-state comparison pass; private T3 unchanged | Complete; owner-run authority and evidence retained above; no G3 dispatch authority follows |
+| G3 Development issue and PR | 4, after G2, before dispatching coding work | Passed | Fresh signed AID-7 delegation, one-file draft PR, Linear/calling-thread links, exact bridge restart equality and independent closure pass | Complete; installed composition retained, draft PR open for owner review |
 
 G1 may use a temporary bridge-only public listener once its exact configuration
 is authorized through the escalation. Record and remove temporary host changes
@@ -323,3 +559,9 @@ None.
 | 2026-10-07 | Approved G1 evidence adjustment; runtime requirements unchanged; only owner cleanup blocks acceptance | Aidan accepts observed prompt response and verified 1.772 s activity timestamps; exact HTTP duration remains unverified; no timing logging or telemetry request required | Aidan, "Yeah do that and if I start seeing timeout errors I'll revisit it"; workstream 2 gate-closure lead | 2–4 |
 | 2026-10-07 | Workstream 2 and G1 accepted; approved responsiveness evidence adjustment retained, runtime requirements unchanged | Owner cleanup verified read-only at 12:19 UTC; temporary 8443/8787 removed, private T3 443 unchanged and private store/secrets retained; prior reviewed candidate and live proof reused | Aidan supplied cleanup answer and evidence approval; workstream 2 acceptance lead | 2–4 |
 | 2026-10-07 | Workstream 3 accepted without specification drift; retained G1 receipt disposition handed to G3 | Isolated native answer, lost-send handover and restart evidence passed; two required lifecycle corrections passed one remediation and fresh closure; permanent service/Linear-to-PR proof await G2/G3 | Workstream 3 lead under approved scope | 3–4 |
+| 2026-10-07 | Workstream 4 recovery and reviewed deployment candidate; blocked on G2 without specification drift | Interrupted diff was only the attributable plan transition; independent review and fresh closure passed. Actual host/public changes and owner signed receipt action need explicit approval | Workstream 4 recovery lead under approved scope | 4 |
+| 2026-10-07 | Owner-installed G2 edge verified; G2 Testing and workstream 4 Blocked without drift | Aidan chose owner-run installation. Exact unit, private metadata, active service, public DNS/TLS/routes and unchanged private T3 pass; fresh signed delivery and owner bridge restart remain | Aidan owner answer; workstream 4 installation-verification lead | 4 |
+| 2026-10-07 | Owner fresh signed G2 reply verified; only owner bridge restart remains; no drift | Sequence 3 postdates installed startup and matches exact instructed reply/session/identities; exact retained receipt/activity/lifecycle and PID/start baseline recorded read-only | Aidan supplied "I sent it"; workstream 4 receipt-verification lead | 4 |
+| 2026-10-07 | G2 Passed after owner bridge restart; workstream 4 Blocked on separate G3 proposal without drift | Changed PID/start and exact unchanged receipt/activity/lifecycle baseline verified read-only; private T3 and bridge-only public ingress unchanged; no coding authority follows | Aidan said "Ran those now"; workstream 4 restart-verification lead | 4 |
+| 2026-10-07 | G3 approved exact test and narrow lead-run transition; readiness passed, owner delegation pending | Approved private/bridge actions complete; fresh issue and initial dispatch remain owner-run; no drift | Aidan "do it", verified by workstream 4 lead and independent reviewer | 4 |
+| 2026-10-07 | Workstream 4 and G3 accepted without specification drift | Fresh AID-7 one-file draft PR linked in Linear/calling T3 thread, exact bridge restart state equality and fresh independent evidence closure pass; no extra dispatch, integration push, merge, deploy, T3 restart or Funnel change | Workstream 4 lead under approved owner scope | 4 |

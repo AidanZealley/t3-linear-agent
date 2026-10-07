@@ -1,6 +1,6 @@
 # T3 Linear agent specification
 
-Status: approved by Aidan on 7 October 2026 for first-version implementation. No integration has been tested end to end.
+Status: approved by Aidan on 7 October 2026 for first-version implementation. The approved AID-7 development test passed end to end.
 
 Implementation evidence as of 7 October 2026: the standalone T3 client passed
 isolated connection, idle worktree launch, idempotent send, reconnect, and active-run
@@ -13,8 +13,10 @@ evidence; exact HTTP response duration remains unverified. The five-second HTTP 
 runtime requirements remain unchanged. Durable routing, queueing, native answers,
 stop, reporting and recovery are implemented. Isolated external question answers,
 lost-send credential handover and controlled T3 restart passed; subsequent
-lifecycle guards passed focused checks. Installed-service and end-to-end acceptance
-remain pending. See the
+lifecycle guards passed focused checks. The supervised bridge is installed with public signed delivery and bridge-only
+restart proof. AID-7 produced exactly one isolated one-file draft PR, linked in
+Linear and the calling T3 conversation. Workstream 4 is accepted; final whole-feature
+review remains. See the
 [implementation plan](implementation/plan.md#acceptance-evidence).
 
 ## Outcome
