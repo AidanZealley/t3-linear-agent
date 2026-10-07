@@ -1,0 +1,10 @@
+{
+  "providerInstanceId": "codex",
+  "model": "gpt-6.1-sol",
+  "projects": {
+    "replace-with-your-T3-project-ID": {
+      "repository": "/absolute/path/to/your/repository",
+      "baseRef": "main"
+    }
+  }
+}
