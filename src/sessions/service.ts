@@ -5,6 +5,7 @@ import type { T3Client, ReconciliationReads, UncertainOperation } from "../t3/cl
 import type { RuntimeMode, T3Tools } from "../t3/contracts.ts";
 import type { ServiceConfig } from "./config.ts";
 import type { Session, Intent, Report, IssueContext } from "./types.ts";
+import { selectModel, modelAvailable } from "./routing.ts";
 
 export type SessionT3 = Pick<T3Client, "projects" | "project" | "capabilities" | "waitRun" | "launch" | "send" | "readThread" | "threads" | "queue" | "cancelQueued" | "interrupt" | "pendingRequests" | "pendingRequest" | "answer" | "credentialSessionId" | "status" | "reconnect" | "renew">;
 export type SessionLinear = {
@@ -108,10 +109,14 @@ export class SessionService {
         if (session.stopPending) await this.stopSession(session);
         else if (session.status === "active") await this.observe(session);
       }
-      const blocked = this.store.sessions().some(item => item.status === "active" || item.status === "paused" || item.stopPending);
-      if (!blocked && !this.t3.status.paused) {
-        const next = this.store.sessions().find(item => item.status === "queued");
-        if (next) await this.dispatch(next);
+      while (!this.t3.status.paused) {
+        const sessions = this.store.sessions();
+        // Paused or stopping sessions may still have a running T3 thread.
+        const occupied = sessions.filter(item => item.status === "active" || item.status === "paused" || item.stopPending).length;
+        if (occupied >= this.config.maxActiveSessions) break;
+        const next = sessions.find(item => item.status === "queued" && !item.stopPending);
+        if (!next) break;
+        await this.dispatch(next);
       }
     } catch {
       // Raw transport/provider errors can contain credentials or command output.
@@ -122,8 +127,8 @@ export class SessionService {
     await this.flushReports();
   }
   private async select(session: Session) {
+    const issue = (!session.projectId || (!session.threadId && !session.modelSelection)) && session.issueId ? await this.linear.issue(session.issueId) : undefined;
     if (!session.projectId) {
-      const issue = session.issueId ? await this.linear.issue(session.issueId) : undefined;
       if (issue) { session.title = `${issue.identifier} [Linear ${session.id}]`; session.branch = branchName(issue.identifier, session.id); }
       const projects: T3Tools["t3_project_list"]["output"]["projects"] = [];
       let cursor: number | null = null;
@@ -152,6 +157,22 @@ export class SessionService {
       this.report(session, "error", "The selected T3 project is unavailable or its repository is not configured. Restore that project; this session will not switch repositories.");
       return false;
     }
+    if (!session.threadId) {
+      if (!session.modelSelection) {
+        try { session.modelSelection = selectModel(issue?.labels ?? [], this.config); }
+        catch (error) {
+          session.status = "clarification";
+          this.report(session, "elicitation", (error as Error).message);
+          return false;
+        }
+        this.store.saveSession(session);
+      }
+      if (!modelAvailable(session.modelSelection, await this.t3.capabilities())) {
+        session.status = "failed";
+        this.report(session, "error", "The selected provider, model or reasoning setting is unavailable in T3. Restore it and reply here; this session will retain its selection.");
+        return false;
+      }
+    }
     return true;
   }
   private async dispatch(session: Session) {
@@ -162,7 +183,7 @@ export class SessionService {
       const input = {
         title: session.title, projectId: session.projectId!,
         workspaceStrategy: { type: "worktree" as const, baseRef: project.baseRef, branch: session.branch, startFromOrigin: false },
-        modelSelection: { instanceId: this.config.providerInstanceId, model: this.config.model }, runtimeMode: this.runtimeMode,
+        modelSelection: session.modelSelection!, runtimeMode: this.runtimeMode,
       };
       const intent = this.intent(session, "t3_thread_launch", input);
       const result = await this.t3.launch(input);
@@ -190,7 +211,10 @@ export class SessionService {
     const result = await this.t3.send(input, intent.credentialSessionId);
     session.runId = result.runId;
     this.confirm(intent, session, result);
-    this.report(session, "thought", "T3 is working in the selected project's managed worktree.");
+    const selection = session.modelSelection;
+    const effort = Object.values(selection?.options ?? {})[0];
+    const model = selection ? ` Selected ${selection.instanceId} / ${selection.model}${effort ? ` with ${effort} reasoning` : ""}. This selection is retained for the session.` : "";
+    this.report(session, "thought", `T3 is working in the selected project's managed worktree.${model}`);
   }
   private validateThreadBinding(session: Session, thread: T3Tools["t3_thread_read"]["output"]["thread"]) {
     if (thread.projectId === session.projectId && thread.branch === session.branch && thread.worktreePath) return true;

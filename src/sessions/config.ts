@@ -8,6 +8,7 @@ const git = promisify(execFile);
 export const serviceConfigSchema = z.object({
   providerInstanceId: z.string().min(1),
   model: z.string().min(1),
+  maxActiveSessions: z.number().int().positive().default(5),
   projects: z.record(z.string(), z.object({ repository: z.string().min(1), baseRef: z.string().min(1) })),
 });
 export type ServiceConfig = z.infer<typeof serviceConfigSchema>;

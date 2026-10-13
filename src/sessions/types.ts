@@ -1,4 +1,5 @@
 import type { UncertainOperation } from "../t3/client.ts";
+import type { ModelSelection } from "./routing.ts";
 
 export type Session = {
   id: string;
@@ -6,6 +7,7 @@ export type Session = {
   order: number;
   status: "queued" | "clarification" | "active" | "completed" | "failed" | "stopped" | "paused";
   projectId?: string;
+  modelSelection?: ModelSelection;
   threadId?: string;
   runId?: string;
   title: string;
@@ -33,4 +35,4 @@ export type Report = {
   nextAt: number;
   status: "pending" | "sent" | "failed";
 };
-export type IssueContext = { identifier: string; projectName?: string };
+export type IssueContext = { identifier: string; projectName?: string; labels?: string[] };

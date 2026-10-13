@@ -21,6 +21,7 @@ class FakeT3 {
   projectsList: T3Tools["t3_project_list"]["output"]["projects"] = [];
   states = new Map<string, T3Tools["t3_thread_read"]["output"]>();
   launched: string[] = [];
+  selections: NonNullable<Parameters<SessionT3["launch"]>[0]["modelSelection"]>[] = [];
   sent: string[] = [];
   answers: Record<string, string>[] = [];
   cancelled: string[] = [];
@@ -32,12 +33,18 @@ class FakeT3 {
   queued: string[] = [];
   async projects() { return { projects: this.projectsList, nextCursor: null }; }
   async project(input: { projectId: string }) { const found = this.projectsList.find(p => p.id === input.projectId); if (!found) throw Error(); return found; }
-  async capabilities(): Promise<T3Tools["orchestrator_capabilities"]["output"]> { throw Error("not used"); }
+  async capabilities(): Promise<T3Tools["orchestrator_capabilities"]["output"]> {
+    return { features: {} as T3Tools["orchestrator_capabilities"]["output"]["features"], inheritedModel: null, inheritedProviderInstanceId: null, parentThreadId: null, interactionMode: "default", runtimeMode: "full-access", providers: [
+      { providerInstanceId: "provider", driverKind: "codex", displayName: null, constraints: [], canRunChildTask: true, canRunCrossProviderChildTask: true, models: [{ id: "model", label: null }] },
+      ...["codex", "claudeAgent"].map(providerInstanceId => ({ providerInstanceId, driverKind: providerInstanceId, displayName: null, constraints: [], canRunChildTask: true, canRunCrossProviderChildTask: true, models: (providerInstanceId === "codex" ? ["gpt-6-luna", "gpt-6.1-sol"] : ["claude-sonnet-5-5", "claude-opus-5-5"]).map(id => ({ id, label: null, options: [{ id: providerInstanceId === "codex" ? "reasoningEffort" : "effort", label: "Reasoning", type: "select" as const, options: ["low", "medium", "high"].map(id => ({ id, label: id })) }] })) })),
+    ] };
+  }
   async reconnect() { this.status.paused = false; }
   async renew() { throw Error("not used"); }
   async launch(input: Parameters<SessionT3["launch"]>[0]) {
     const threadId = `thread-${this.launched.length}`;
     this.launched.push(input.projectId);
+    this.selections.push(input.modelSelection);
     const now = new Date().toISOString();
     this.states.set(threadId, { thread: { threadId, projectId: input.projectId, title: input.title, branch: input.workspaceStrategy.branch, worktreePath: "/worktree", createdAt: now, updatedAt: now, createdBy: "agent", creationSource: "mcp", archived: false, status: "idle", latestRunId: null, activeRunId: null, interactionMode: "default", itemCount: 0, linkedPullRequest: null, model: "model", providerInstanceId: "provider", pendingRequestCount: 0, parentThreadId: null, relationshipToParent: null, runCount: 0, runtimeMode: "full-access", settled: false, settledAt: null, titleRegeneration: null }, items: [], recentRuns: [], nextPosition: null, hasMore: false });
     if (this.lostLaunch) throw Error("lost launch response");
@@ -89,12 +96,58 @@ async function fixture(t: test.TestContext) {
   const t3 = new FakeT3();
   t3.projectsList = ["Alpha", "Beta"].map((title, index) => ({ id: `project-${index}`, title, workspaceRoot: directory, createdAt: "now", updatedAt: "now", deletedAt: null, defaultModelSelection: null, scripts: [] }));
   const names = new Map([["one", "Alpha"], ["two", "Beta"]]);
+  const labels = new Map<string, string[]>();
   const delivered: Report[] = []; let failReport = false;
-  const linear = { async issue(id: string) { return { identifier: id, projectName: names.get(id) }; }, async report(report: Report) { if (failReport) throw Error(); delivered.push({ ...report }); } };
-  const config = { providerInstanceId: "provider", model: "model", projects: Object.fromEntries(t3.projectsList.map(p => [p.id, { repository: directory, baseRef: "main" }])) };
+  const linear = { async issue(id: string) { return { identifier: id, projectName: names.get(id), labels: labels.get(id) }; }, async report(report: Report) { if (failReport) throw Error(); delivered.push({ ...report }); } };
+  const config = { providerInstanceId: "provider", model: "model", maxActiveSessions: 1, projects: Object.fromEntries(t3.projectsList.map(p => [p.id, { repository: directory, baseRef: "main" }])) };
   const service = new SessionService(store, t3, linear, config, "full-access");
-  return { get store() { return store; }, reopen() { store.close(); store = new AcknowledgedStore(join(directory, "state.sqlite")); }, t3, service, names, delivered, linear, config, failReports(value: boolean) { failReport = value; } };
+  return { get store() { return store; }, reopen() { store.close(); store = new AcknowledgedStore(join(directory, "state.sqlite")); }, t3, service, names, labels, delivered, linear, config, failReports(value: boolean) { failReport = value; } };
 }
+
+test("five sessions run across projects, retain capacity after restart and refill freed slots", async t => {
+  const f = await fixture(t);
+  f.config.maxActiveSessions = 5;
+  for (let index = 0; index < 7; index++) {
+    const id = `session-${index}`;
+    f.names.set(id, index % 2 ? "Beta" : "Alpha");
+    f.store.receive(id, event(id));
+  }
+  await Promise.all([f.service.tick(), f.service.tick()]);
+  assert.deepEqual(f.t3.launched, ["project-0", "project-1", "project-0", "project-1", "project-0"]);
+  assert.equal(f.store.sessions().filter(session => session.status === "active").length, 5);
+  assert.equal(f.store.sessions().filter(session => session.status === "queued").length, 2);
+  f.reopen();
+  const restarted = new SessionService(f.store, f.t3, f.linear, f.config, "full-access");
+  await restarted.tick();
+  assert.equal(f.t3.launched.length, 5);
+  f.t3.finish(f.store.sessions()[0]!.threadId!);
+  await restarted.tick();
+  assert.equal(f.t3.launched.length, 6);
+  assert.equal(f.store.sessions().find(session => session.id === "session-5")!.status, "active");
+  assert.equal(f.store.sessions().find(session => session.id === "session-6")!.status, "queued");
+  f.config.maxActiveSessions = 2;
+  await restarted.tick();
+  assert.equal(f.t3.launched.length, 6);
+  assert.equal(f.store.sessions().filter(session => session.status === "active").length, 5);
+});
+
+test("paused sessions reserve only their own slot and clarification does not consume capacity", async t => {
+  const f = await fixture(t);
+  f.config.maxActiveSessions = 2;
+  f.names.delete("one");
+  f.store.receive("one", event("one")); f.store.receive("two", event("two"));
+  await f.service.tick();
+  assert.equal(f.store.sessions().find(session => session.id === "one")!.status, "clarification");
+  const paused = f.store.sessions().find(session => session.id === "two")!;
+  paused.status = "paused"; f.store.saveSession(paused);
+  for (const id of ["three", "four"]) {
+    f.names.set(id, "Alpha"); f.store.receive(id, event(id));
+  }
+  await f.service.tick();
+  assert.equal(f.t3.launched.length, 2);
+  assert.equal(f.store.sessions().find(session => session.id === "three")!.status, "active");
+  assert.equal(f.store.sessions().find(session => session.id === "four")!.status, "queued");
+});
 
 test("exact routing, global durable queue, rename and restart retain identity", async t => {
   const f = await fixture(t);
@@ -281,4 +334,49 @@ test("restart after the final-report commit continues pending input without rele
   assert.equal(f.delivered.filter(report => report.id === finalReport.id).length, 1);
   f.t3.finish(original.threadId!); await restarted.tick();
   assert.deepEqual(f.t3.launched, ["project-0", "project-1"]);
+});
+
+
+test("ticket labels select reasoning, persist through restart and ignore follow-up label changes", async t => {
+  const f = await fixture(t);
+  f.labels.set("one", ["harness:claude-code", "difficulty:high"]);
+  f.store.receive("one", event("one"));
+  await f.service.tick();
+  const selected = { instanceId: "claudeAgent", model: "claude-opus-5-5", options: { effort: "high" } };
+  assert.deepEqual(f.t3.selections, [selected]);
+  assert.deepEqual(f.store.sessions()[0]!.modelSelection, selected);
+  assert.ok(f.delivered.some(r => r.body.includes("claude-opus-5-5 with high reasoning")));
+  f.labels.set("one", ["harness:codex", "difficulty:low"]);
+  f.t3.finish(f.store.sessions()[0]!.threadId!);
+  f.reopen();
+  f.store.receive("follow", event("one", "prompted", "Continue", "follow"));
+  await new SessionService(f.store, f.t3, f.linear, f.config, "full-access").tick();
+  assert.deepEqual(f.t3.selections, [selected]);
+  assert.deepEqual(f.store.sessions()[0]!.modelSelection, selected);
+  assert.equal(f.t3.sent.at(-1), "Continue");
+});
+
+test("conflicting routing labels wait without launch and correction retries the pinned project", async t => {
+  const f = await fixture(t);
+  f.labels.set("one", ["harness:claude-code", "harness:codex"]);
+  f.store.receive("one", event("one")); await f.service.tick();
+  assert.equal(f.store.sessions()[0]!.status, "clarification");
+  assert.equal(f.t3.launched.length, 0);
+  f.labels.set("one", ["harness:codex", "difficulty:low"]);
+  f.store.receive("fixed", event("one", "prompted", "Fixed", "fixed")); await f.service.tick();
+  assert.deepEqual(f.t3.selections, [{ instanceId: "codex", model: "gpt-6-luna", options: { reasoningEffort: "low" } }]);
+});
+
+test("unavailable routing selection prevents launch and remains pinned", async t => {
+  const f = await fixture(t);
+  f.labels.set("one", ["harness:claude-code"]);
+  const capabilities = f.t3.capabilities.bind(f.t3);
+  f.t3.capabilities = async () => ({ ...await capabilities(), providers: [] });
+  f.store.receive("one", event("one")); await f.service.tick();
+  assert.equal(f.store.sessions()[0]!.status, "failed");
+  assert.equal(f.t3.launched.length, 0);
+  f.labels.set("one", ["harness:codex"]);
+  f.t3.capabilities = capabilities;
+  f.store.receive("retry", event("one", "prompted", "Retry", "retry")); await f.service.tick();
+  assert.equal(f.t3.selections[0]!.model, "claude-opus-5-5");
 });
