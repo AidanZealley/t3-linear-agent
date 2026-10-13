@@ -1,6 +1,7 @@
 {
   "providerInstanceId": "codex",
   "model": "gpt-6.1-sol",
+  "maxActiveSessions": 5,
   "projects": {
     "replace-with-your-T3-project-ID": {
       "repository": "/absolute/path/to/your/repository",

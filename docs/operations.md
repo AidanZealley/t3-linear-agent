@@ -18,8 +18,11 @@ and restart only the bridge.
 
 ## Using Linear
 
-One coding session runs at a time. Follow-ups queue on their original thread;
-queued sessions wait for the active session. Project names match case-sensitively,
+Up to `maxActiveSessions` coding sessions run at a time across all projects.
+The setting defaults to 5 in `sessions.json`; use a positive integer and restart
+the service to change it. Follow-ups queue on their original thread, and new
+sessions wait when all slots are occupied. Paused sessions and pending
+cancellations reserve a slot until reconciled. Project names match case-sensitively,
 and each session retains its selected project ID.
 
 Reply normally to a single native question. For multiple questions, reply with a
@@ -34,6 +37,54 @@ The bridge forwards public questions, confirmed final responses and ten-minute
 status heartbeats. It does not forward reasoning or raw command logs. A completed
 investigation can return an answer without a PR. When a PR exists, its URL appears
 in the final response and the Linear session's external links.
+
+## Ticket model selection
+
+In Linear, open Settings > Workspace > Labels, or your team's Settings > Labels.
+Create two issue label groups with exactly these lowercase names:
+
+- `harness`, containing labels named `claude-code` and `codex`.
+- `difficulty`, containing labels named `low`, `medium` and `high`.
+
+Use workspace labels if you want them available across teams. Groups allow only
+one child label per group on a ticket. You can also create them from an issue's
+Add label menu by entering `harness:claude-code`, `harness:codex`, `difficulty:low`,
+`difficulty:medium` and `difficulty:high`. Linear interprets this syntax as
+`group:child`. The bridge accepts both grouped labels and ordinary labels whose
+full names match these strings. See [Linear's label documentation](https://linear.app/docs/issue-property#issue-labels).
+
+Apply one harness label and one difficulty label before delegating a ticket to T3.
+For example, `harness:claude-code` and `difficulty:high` select Opus 5.5 with high
+reasoning. `harness:codex` and `difficulty:low` select GPT-6 Luna with low reasoning.
+
+The mapping is:
+
+- Claude Code, low: Sonnet 5.5 with low reasoning.
+- Claude Code, medium: Opus 5.5 with medium reasoning.
+- Claude Code, high: Opus 5.5 with high reasoning.
+- Codex, low: GPT-6 Luna with low reasoning.
+- Codex, medium: GPT-6.1 Sol with low reasoning.
+- Codex, high: GPT-6.1 Sol with high reasoning.
+
+Missing difficulty means medium. Missing harness uses `providerInstanceId` in the
+private `sessions.json`: `claudeAgent` means Claude Code and `codex` means Codex.
+These providers use the mapping even without labels; their configured `model`
+does not override it. Other provider IDs keep their configured model without
+routing labels and need an explicit harness label to use a difficulty label.
+The mapping uses T3's standard instance IDs `claudeAgent` and `codex`.
+
+Conflicting or unsupported `harness:` or `difficulty:` labels request clarification
+before a thread starts. Fix the labels and reply in the Linear session to retry.
+Unrelated labels are ignored. Labels and values are case-sensitive.
+
+The bridge checks that T3 supports the selected provider, model and reasoning
+setting and includes the selection in its working activity. It retains the
+selection across restarts and retries. After selection, label edits do not change
+that session. Existing threads keep their current model; use a new session to
+apply new routing labels.
+
+After installing this code change, rebuild and restart the bridge using the
+update steps below. Creating labels alone does not update the running service.
 
 ## Configuration overrides
 

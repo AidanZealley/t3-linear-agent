@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { Store, privateFile } from "./store/index.ts";
 import { Linear } from "./linear/client.ts";
+import { routingLabels } from "./linear/labels.ts";
 import { InitialActivityWorker } from "./linear/worker.ts";
 import { bridgeServer } from "./http.ts";
 import { T3Client } from "./t3/client.ts";
@@ -46,7 +47,16 @@ export async function main() {
       if (report.url) await linear.links(report.sessionId, { addedExternalUrls: [{ url: report.url, label: "Pull request" }] });
     };
     const sessions = new SessionService(store, t3, {
-      async issue(id) { const issue = await (await linear.client()).issue(id); return { identifier: issue.identifier, projectName: (await issue.project)?.name }; },
+      async issue(id) {
+        const issue = await (await linear.client()).issue(id);
+        let page = await issue.labels({ first: 100 });
+        const labels = await routingLabels(page.nodes);
+        while (page.pageInfo.hasNextPage) {
+          page = await issue.labels({ first: 100, after: page.pageInfo.endCursor });
+          labels.push(...await routingLabels(page.nodes));
+        }
+        return { identifier: issue.identifier, projectName: (await issue.project)?.name, labels };
+      },
       report: sendReport,
     }, config, t3Config().runtimeMode);
     if (pending.length) {

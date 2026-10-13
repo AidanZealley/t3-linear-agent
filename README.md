@@ -148,9 +148,16 @@ repositories you want this bridge to use. A Linear issue's project name must
 exactly match the T3 project's title, including case. A missing or ambiguous match
 asks for clarification instead of choosing another repository.
 
-The provider/model setting applies to new sessions independently of T3's default.
-There is currently no per-issue model selector in Linear. The example names Codex
-`gpt-6.1-sol`; use IDs actually present in your T3 catalog.
+`maxActiveSessions` sets the global limit for concurrent Linear sessions and
+defaults to 5. Set it to a positive integer in `sessions.json` and restart the
+service to change it. Extra sessions wait in the durable queue. Paused sessions
+and pending cancellations reserve a slot until reconciled.
+
+The provider setting supplies the default harness independently of T3's default.
+For `codex` and `claudeAgent`, ticket labels select the model and reasoning level
+using the mapping in [the operating guide](docs/operations.md#ticket-model-selection).
+Without labels, these providers use their medium difficulty mapping. Other provider
+IDs retain their configured model unless a supported harness label overrides them.
 
 The defaults assume T3 uses its normal local endpoint and data directory. For
 another endpoint or installation, add the relevant variables to `service.env`
