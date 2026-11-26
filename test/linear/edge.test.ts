@@ -91,6 +91,13 @@ test("HTTP survives malformed targets, acknowledges before API delivery and reje
     assert.equal(f.store.dueActivities().length, 1);
     for (const e of [{ ...event(), organizationId: "other" }, { ...event(), oauthClientId: "other" }, { ...event(), appUserId: "other" }]) assert.equal((await post(e)).status, 403);
     assert.equal((await fetch(`${base}/oauth/start`)).status, 401);
+    const authorization = `Basic ${Buffer.from("aidan:synthetic-installation-password").toString("base64")}`;
+    const restartOAuth = await fetch(`${base}/oauth/start`, { headers: { authorization }, redirect: "manual" });
+    assert.equal(restartOAuth.status, 302);
+    const restartUrl = new URL(restartOAuth.headers.get("location")!);
+    assert.equal(restartUrl.origin, "https://linear.app");
+    assert.equal(restartUrl.searchParams.get("update_scopes_on_existing_token"), "true");
+    assert.deepEqual(f.store.installation(), installation);
     assert.equal(f.store.pendingEvents().length, 1);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); f.store.close(); f.cleanup(); }
 });

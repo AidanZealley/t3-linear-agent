@@ -5,12 +5,11 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { Store, privateFile } from "./store/index.ts";
 import { Linear } from "./linear/client.ts";
-import { routingLabels } from "./linear/labels.ts";
 import { InitialActivityWorker } from "./linear/worker.ts";
 import { bridgeServer } from "./http.ts";
 import { T3Client } from "./t3/client.ts";
 import { t3Config } from "./config.ts";
-import { serviceConfig, validateConfiguration } from "./sessions/config.ts";
+import { serviceConfig } from "./sessions/config.ts";
 import { SessionService } from "./sessions/service.ts";
 import type { Report } from "./sessions/types.ts";
 
@@ -35,8 +34,7 @@ export async function main() {
     if (!process.env.T3_RUNTIME_MODE) throw new Error("Select T3_RUNTIME_MODE explicitly.");
     const config = serviceConfig(process.env.SESSION_CONFIG_FILE ?? `${stateDirectory}/sessions.json`);
     const pending = store.intents().filter(item => item.status !== "confirmed");
-    t3 = await T3Client.create(t3Config(), pending);
-    if (!pending.length) await validateConfiguration(config, t3);
+    t3 = await T3Client.create(t3Config(), pending, async reads => { await reads.capabilities(); });
     const linear = new Linear(store, secrets);
     const sendReport = async (report: Report) => {
       try { await linear.activity({ id: report.id, agentSessionId: report.sessionId, content: { type: report.type, body: report.body } }); }
@@ -47,30 +45,9 @@ export async function main() {
       if (report.url) await linear.links(report.sessionId, { addedExternalUrls: [{ url: report.url, label: "Pull request" }] });
     };
     const sessions = new SessionService(store, t3, {
-      async issue(id) {
-        const issue = await (await linear.client()).issue(id);
-        let page = await issue.labels({ first: 100 });
-        const labels = await routingLabels(page.nodes);
-        while (page.pageInfo.hasNextPage) {
-          page = await issue.labels({ first: 100, after: page.pageInfo.endCursor });
-          labels.push(...await routingLabels(page.nodes));
-        }
-        return { identifier: issue.identifier, projectName: (await issue.project)?.name, labels };
-      },
+      issue: id => linear.issueContext(id),
       report: sendReport,
-    }, config, t3Config().runtimeMode);
-    if (pending.length) {
-      let validated = false;
-      try {
-        await t3.renew(async (operations, reads) => {
-          await validateConfiguration(config, reads); validated = true;
-          return sessions.reconcile(operations, reads);
-        });
-      } catch (error) {
-        if (!validated) throw error;
-        console.error("Restored T3 intent remains ambiguous. Receipt and reporting will continue while dispatch is paused.");
-      }
-    }
+    }, config);
     const initial = new InitialActivityWorker(store, async (sessionId, activityId) => {
       await sendReport({ id: activityId, sessionId, type: "thought", body: "Received. Work is queued for T3; project selection and existing sessions are checked before coding starts.", attempts: 0, nextAt: 0, status: "pending" });
     });

@@ -1,21 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
 import type { Store, Receipt } from "../store/index.ts";
 import type { T3Client, ReconciliationReads, UncertainOperation } from "../t3/client.ts";
-import type { RuntimeMode, T3Tools } from "../t3/contracts.ts";
+import type { T3Tools } from "../t3/contracts.ts";
 import type { ServiceConfig } from "./config.ts";
 import type { Session, Intent, Report, IssueContext } from "./types.ts";
-import { selectModel, modelAvailable } from "./routing.ts";
+import { hasModelOverride, selectModel } from "./routing.ts";
 
 export type SessionT3 = Pick<T3Client, "projects" | "project" | "capabilities" | "waitRun" | "launch" | "send" | "readThread" | "threads" | "queue" | "cancelQueued" | "interrupt" | "pendingRequests" | "pendingRequest" | "answer" | "credentialSessionId" | "status" | "reconnect" | "renew">;
 export type SessionLinear = {
   issue(id: string): Promise<IssueContext>;
   report(report: Report): Promise<void>;
 };
+const outagePrefix = "T3 cannot start or continue this work. ";
 const terminal = new Set(["completed", "failed", "cancelled", "interrupted", "rolled_back"]);
 const stopText = /^(?:\/stop|(?:please\s+)?(?:stop|cancel))(?:\s+(?:now|(?:this|the)\s+(?:task|run|session|work)|working|work))?[.!]?$/i;
 const resumeText = /^\/resume(?:\s+([\s\S]+))?$/i;
-const branchName = (identifier: string, sessionId: string) => `linear/${identifier.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-${sessionId.replace(/[^a-zA-Z0-9-]/g, "-")}`;
 
 export class SessionService {
   private flight?: Promise<void>;
@@ -26,9 +25,8 @@ export class SessionService {
   private t3: SessionT3;
   private linear: SessionLinear;
   private config: ServiceConfig;
-  private runtimeMode: RuntimeMode;
-  constructor(store: Store, t3: SessionT3, linear: SessionLinear, config: ServiceConfig, runtimeMode: RuntimeMode) {
-    this.store = store; this.t3 = t3; this.linear = linear; this.config = config; this.runtimeMode = runtimeMode;
+  constructor(store: Store, t3: SessionT3, linear: SessionLinear, config: ServiceConfig) {
+    this.store = store; this.t3 = t3; this.linear = linear; this.config = config;
   }
 
   // Only one lifecycle pass runs at a time. Receipt and initial acknowledgement remain independent.
@@ -63,7 +61,6 @@ export class SessionService {
         session = {
           id: event.agentSession.id, issueId: event.agentSession.issueId ?? undefined,
           title: `${identifier} [Linear ${event.agentSession.id}]`,
-          branch: branchName(identifier, event.agentSession.id),
           order: receipt.sequence, status: "queued", inputs: [{ key: `created:${event.agentSession.id}`, text: this.prompt(event) }], seen: [], cursor: -1, lastReportAt: 0,
         };
       }
@@ -102,6 +99,7 @@ export class SessionService {
         if (this.t3.status.uncertain.length) await this.t3.renew(this.reconcile);
         else await this.t3.reconnect();
       }
+      if (this.t3.status.paused) throw new Error("T3 dispatch is paused.");
       const unresolved = this.store.intents().filter(item => item.status !== "confirmed");
       if (unresolved.length) await this.reconcile(unresolved, this.t3);
       // Restore unfinished threads before selecting new work, including cancellation after a crash.
@@ -118,18 +116,28 @@ export class SessionService {
         if (!next) break;
         await this.dispatch(next);
       }
+      for (const session of this.store.sessions()) {
+        if (session.problem?.startsWith(outagePrefix)) {
+          session.problem = undefined;
+          this.store.saveSession(session);
+        }
+      }
     } catch {
       // Raw transport/provider errors can contain credentials or command output.
-      for (const session of this.store.sessions().filter(item => item.status === "active" || item.stopPending)) {
-        if (!session.problem) { session.problem = "T3 is unavailable. Delivery is retained for reconciliation; no coding work will be resent."; this.report(session, "error", session.problem); }
+      for (const session of this.store.sessions().filter(item => item.status === "queued" || item.status === "active" || item.stopPending)) {
+        if (!session.problem) {
+          const reason = this.t3.status.reason ?? "The bridge could not continue processing this session.";
+          session.problem = outagePrefix + reason + " The bridge has retained your request.";
+          this.report(session, "error", session.problem);
+        }
       }
     }
     await this.flushReports();
   }
   private async select(session: Session) {
-    const issue = (!session.projectId || (!session.threadId && !session.modelSelection)) && session.issueId ? await this.linear.issue(session.issueId) : undefined;
+    const issue = (!session.projectId || !session.threadId) && session.issueId ? await this.linear.issue(session.issueId) : undefined;
     if (!session.projectId) {
-      if (issue) { session.title = `${issue.identifier} [Linear ${session.id}]`; session.branch = branchName(issue.identifier, session.id); }
+      if (issue) session.title = `${issue.identifier} [Linear ${session.id}]`;
       const projects: T3Tools["t3_project_list"]["output"]["projects"] = [];
       let cursor: number | null = null;
       do { const page = await this.t3.projects({ ...(cursor === null ? {} : { cursor }), limit: 100 }); projects.push(...page.projects); cursor = page.nextCursor; } while (cursor !== null);
@@ -149,27 +157,19 @@ export class SessionService {
       this.report(session, "error", "The selected T3 project could not be read. Restore access and reply here; this session will not switch repositories.");
       return false;
     }
-    const configured = this.config.projects[session.projectId];
-    let repositoryMatches = false;
-    try { if (configured) repositoryMatches = realpathSync(project.workspaceRoot) === realpathSync(configured.repository); } catch { repositoryMatches = false; }
-    if (project.deletedAt || !repositoryMatches) {
+    if (project.deletedAt) {
       session.status = "failed";
-      this.report(session, "error", "The selected T3 project is unavailable or its repository is not configured. Restore that project; this session will not switch repositories.");
+      this.report(session, "error", "The selected T3 project was deleted. Restore that project and reply here.");
       return false;
     }
     if (!session.threadId) {
-      if (!session.modelSelection) {
-        try { session.modelSelection = selectModel(issue?.labels ?? [], this.config); }
-        catch (error) {
-          session.status = "clarification";
-          this.report(session, "elicitation", (error as Error).message);
-          return false;
-        }
-        this.store.saveSession(session);
-      }
-      if (!modelAvailable(session.modelSelection, await this.t3.capabilities())) {
-        session.status = "failed";
-        this.report(session, "error", "The selected provider, model or reasoning setting is unavailable in T3. Restore it and reply here; this session will retain its selection.");
+      const labels = issue?.labels ?? [];
+      const catalog = hasModelOverride(labels) ? await this.t3.capabilities() : undefined;
+      try {
+        session.modelSelection = catalog ? selectModel(labels, catalog, project.defaultModelSelection?.instanceId) : undefined;
+      } catch (error) {
+        session.status = "clarification";
+        this.report(session, "elicitation", (error as Error).message);
         return false;
       }
     }
@@ -179,14 +179,15 @@ export class SessionService {
     if (!await this.select(session)) return;
     session.status = "active"; session.problem = undefined; this.store.saveSession(session);
     if (!session.threadId) {
-      const project = this.config.projects[session.projectId!]!;
       const input = {
         title: session.title, projectId: session.projectId!,
-        workspaceStrategy: { type: "worktree" as const, baseRef: project.baseRef, branch: session.branch, startFromOrigin: false },
-        modelSelection: session.modelSelection!, runtimeMode: this.runtimeMode,
+        ...(session.modelSelection ? { modelSelection: session.modelSelection } : {}),
       };
       const intent = this.intent(session, "t3_thread_launch", input);
       const result = await this.t3.launch(input);
+      const { thread } = await this.t3.readThread({ threadId: result.threadId });
+      if (thread.projectId !== session.projectId) throw new Error("T3 returned a mismatched project.");
+      session.workspace = { branch: thread.branch, worktreePath: thread.worktreePath };
       session.threadId = result.threadId;
       this.confirm(intent, session, { threadId: result.threadId });
     }
@@ -214,10 +215,20 @@ export class SessionService {
     const selection = session.modelSelection;
     const effort = Object.values(selection?.options ?? {})[0];
     const model = selection ? ` Selected ${selection.instanceId} / ${selection.model}${effort ? ` with ${effort} reasoning` : ""}. This selection is retained for the session.` : "";
-    this.report(session, "thought", `T3 is working in the selected project's managed worktree.${model}`);
+    this.report(session, "thought", `T3 is working in the selected project.${model || ` Selected ${state.thread.providerInstanceId} / ${state.thread.model}.`}`);
   }
   private validateThreadBinding(session: Session, thread: T3Tools["t3_thread_read"]["output"]["thread"]) {
-    if (thread.projectId === session.projectId && thread.branch === session.branch && thread.worktreePath) return true;
+    // T3 can return an idle shell before it attaches the managed worktree.
+    const preparingWorkspace = session.workspace?.branch === null && session.workspace.worktreePath === null;
+    if (preparingWorkspace && thread.projectId === session.projectId && thread.worktreePath) {
+      session.workspace = { branch: thread.branch, worktreePath: thread.worktreePath };
+      this.store.saveSession(session);
+      return true;
+    }
+    const workspaceMatches = session.workspace
+      ? thread.branch === session.workspace.branch && thread.worktreePath === session.workspace.worktreePath
+      : thread.branch === session.branch && !!thread.worktreePath;
+    if (thread.projectId === session.projectId && workspaceMatches) return true;
     this.pause(session, "T3 thread workspace binding does not match the selected project. Operator reconciliation is required.");
     return false;
   }
@@ -339,7 +350,16 @@ export class SessionService {
         } while (cursor !== null);
         if (candidates.length === 1) {
           const state = await reads.readThread({ threadId: candidates[0]! });
-          if (state.thread.projectId === session.projectId && state.thread.branch === session.branch && state.thread.worktreePath) { session.threadId = state.thread.threadId; result = { threadId: session.threadId }; }
+          const strategy = intent.input.workspaceStrategy as T3Tools["t3_thread_launch"]["input"]["workspaceStrategy"];
+          const thread = state.thread;
+          const matches = strategy?.type === "worktree"
+            ? thread.branch === strategy.branch && !!thread.worktreePath
+            : thread.creationSource === "mcp";
+          if (thread.projectId === session.projectId && matches) {
+            session.workspace = { branch: thread.branch, worktreePath: thread.worktreePath };
+            session.threadId = thread.threadId;
+            result = { threadId: session.threadId };
+          }
         }
       } else if (session.threadId && intent.tool === "t3_thread_send") {
         const matches: T3Tools["t3_thread_read"]["output"]["items"] = [];

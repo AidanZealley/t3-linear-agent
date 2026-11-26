@@ -36,7 +36,7 @@ export function bridgeServer(store: Store, linear: Linear, secret: string, setup
         const cookie = request.headers.cookie?.split("; ").find(value => value.startsWith("linear_state="))?.slice(13) ?? "";
         await linear.callback(url.searchParams.get("state") ?? "", cookie, url.searchParams.get("code") ?? "");
         response.setHeader("Set-Cookie", "linear_state=; Secure; HttpOnly; SameSite=Lax; Path=/oauth; Max-Age=0");
-        response.writeHead(200).end("T3 installed. This validation bridge acknowledges sessions without starting coding work."); return;
+        response.writeHead(200).end("T3 is connected to Linear. You can close this tab."); return;
       }
       if (request.method === "POST" && url.pathname === "/webhooks/linear") {
         // Node checks requestTimeout periodically. Enforce the webhook deadline directly.

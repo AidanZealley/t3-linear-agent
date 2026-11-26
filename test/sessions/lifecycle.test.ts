@@ -21,7 +21,7 @@ class FakeT3 {
   projectsList: T3Tools["t3_project_list"]["output"]["projects"] = [];
   states = new Map<string, T3Tools["t3_thread_read"]["output"]>();
   launched: string[] = [];
-  selections: NonNullable<Parameters<SessionT3["launch"]>[0]["modelSelection"]>[] = [];
+  selections: Parameters<SessionT3["launch"]>[0]["modelSelection"][] = [];
   sent: string[] = [];
   answers: Record<string, string>[] = [];
   cancelled: string[] = [];
@@ -46,9 +46,9 @@ class FakeT3 {
     this.launched.push(input.projectId);
     this.selections.push(input.modelSelection);
     const now = new Date().toISOString();
-    this.states.set(threadId, { thread: { threadId, projectId: input.projectId, title: input.title, branch: input.workspaceStrategy.branch, worktreePath: "/worktree", createdAt: now, updatedAt: now, createdBy: "agent", creationSource: "mcp", archived: false, status: "idle", latestRunId: null, activeRunId: null, interactionMode: "default", itemCount: 0, linkedPullRequest: null, model: "model", providerInstanceId: "provider", pendingRequestCount: 0, parentThreadId: null, relationshipToParent: null, runCount: 0, runtimeMode: "full-access", settled: false, settledAt: null, titleRegeneration: null }, items: [], recentRuns: [], nextPosition: null, hasMore: false });
+    this.states.set(threadId, { thread: { threadId, projectId: input.projectId, title: input.title, branch: input.workspaceStrategy?.branch ?? "t3-generated-branch", worktreePath: "/worktree", createdAt: now, updatedAt: now, createdBy: "agent", creationSource: "mcp", archived: false, status: "idle", latestRunId: null, activeRunId: null, interactionMode: "default", itemCount: 0, linkedPullRequest: null, model: "model", providerInstanceId: "provider", pendingRequestCount: 0, parentThreadId: null, relationshipToParent: null, runCount: 0, runtimeMode: "full-access", settled: false, settledAt: null, titleRegeneration: null }, items: [], recentRuns: [], nextPosition: null, hasMore: false });
     if (this.lostLaunch) throw Error("lost launch response");
-    return { threadId, projectId: input.projectId, modelSelection: input.modelSelection, runId: null, status: null };
+    return { threadId, projectId: input.projectId, modelSelection: input.modelSelection ?? { instanceId: "provider", model: "model" }, runId: null, status: null };
   }
   async send(input: Parameters<SessionT3["send"]>[0]) {
     this.sent.push(input.message);
@@ -99,10 +99,34 @@ async function fixture(t: test.TestContext) {
   const labels = new Map<string, string[]>();
   const delivered: Report[] = []; let failReport = false;
   const linear = { async issue(id: string) { return { identifier: id, projectName: names.get(id), labels: labels.get(id) }; }, async report(report: Report) { if (failReport) throw Error(); delivered.push({ ...report }); } };
-  const config = { providerInstanceId: "provider", model: "model", maxActiveSessions: 1, projects: Object.fromEntries(t3.projectsList.map(p => [p.id, { repository: directory, baseRef: "main" }])) };
-  const service = new SessionService(store, t3, linear, config, "full-access");
-  return { get store() { return store; }, reopen() { store.close(); store = new AcknowledgedStore(join(directory, "state.sqlite")); }, t3, service, names, labels, delivered, linear, config, failReports(value: boolean) { failReport = value; } };
+  const config = { maxActiveSessions: 1 };
+  const service = new SessionService(store, t3, linear, config);
+  return { directory, get store() { return store; }, reopen() { store.close(); store = new AcknowledgedStore(join(directory, "state.sqlite")); }, t3, service, names, labels, delivered, linear, config, failReports(value: boolean) { failReport = value; } };
 }
+
+test("an authorization outage reports queued work once and dispatches it after recovery", async t => {
+  const f = await fixture(t);
+  f.t3.status.paused = true;
+  f.t3.reconnect = async () => { throw Error("private transport error"); };
+  f.store.receive("one", event("one"));
+
+  await f.service.tick();
+  await f.service.tick();
+
+  assert.equal(f.store.sessions()[0]?.status, "queued");
+  assert.equal(f.t3.launched.length, 0);
+  assert.equal(f.delivered.length, 1);
+  assert.equal(f.delivered[0]?.type, "error");
+  assert.match(f.delivered[0]?.body ?? "", /retained your request/);
+  assert.doesNotMatch(f.delivered[0]?.body ?? "", /private transport error/);
+
+  f.t3.reconnect = async () => { f.t3.status.paused = false; };
+  await f.service.tick();
+
+  assert.equal(f.t3.launched.length, 1);
+  assert.equal(f.t3.sent.length, 1);
+  assert.equal(f.store.sessions()[0]?.problem, undefined);
+});
 
 test("five sessions run across projects, retain capacity after restart and refill freed slots", async t => {
   const f = await fixture(t);
@@ -117,7 +141,7 @@ test("five sessions run across projects, retain capacity after restart and refil
   assert.equal(f.store.sessions().filter(session => session.status === "active").length, 5);
   assert.equal(f.store.sessions().filter(session => session.status === "queued").length, 2);
   f.reopen();
-  const restarted = new SessionService(f.store, f.t3, f.linear, f.config, "full-access");
+  const restarted = new SessionService(f.store, f.t3, f.linear, f.config);
   await restarted.tick();
   assert.equal(f.t3.launched.length, 5);
   f.t3.finish(f.store.sessions()[0]!.threadId!);
@@ -159,7 +183,7 @@ test("exact routing, global durable queue, rename and restart retain identity", 
   f.store.receive("follow", event("one", "prompted", "Follow-up", "follow"));
   f.t3.finish(original);
   f.reopen();
-  const restarted = new SessionService(f.store, f.t3, f.linear, f.config, "full-access");
+  const restarted = new SessionService(f.store, f.t3, f.linear, f.config);
   await restarted.tick(); assert.equal(f.t3.sent.at(-1), "Follow-up"); assert.equal(f.store.sessions()[0]!.threadId, original);
   f.t3.finish(original); await restarted.tick(); assert.deepEqual(f.t3.launched, ["project-0", "project-1"]);
 });
@@ -262,9 +286,9 @@ test("an interrupted T3 run cannot be restarted by already pending follow-ups", 
 
 test("lifecycle reports wait for initial acknowledgement without holding coding work", async t => {
   const f = await fixture(t);
-  const store = new Store(join(f.config.projects["project-0"]!.repository, "ack-order.sqlite"));
+  const store = new Store(join(f.directory, "ack-order.sqlite"));
   t.after(() => store.close());
-  const service = new SessionService(store, f.t3, f.linear, f.config, "full-access");
+  const service = new SessionService(store, f.t3, f.linear, f.config);
   store.receive("one", event("one")); await service.tick();
   assert.equal(f.t3.sent.length, 1); assert.equal(f.delivered.length, 0);
   f.t3.finish(store.sessions()[0]!.threadId!); await service.tick();
@@ -272,6 +296,32 @@ test("lifecycle reports wait for initial acknowledgement without holding coding 
   store.activitySent(store.dueActivities()[0]!.activityId);
   await service.flushReports(); await service.flushReports();
   assert.deepEqual(f.delivered.map(r => r.type), ["thought", "response"]);
+  assert.equal(f.t3.sent.length, 1);
+});
+
+test("a late T3 worktree attachment preserves final reporting", async t => {
+  const f = await fixture(t);
+  const launch = f.t3.launch.bind(f.t3);
+  f.t3.launch = async input => {
+    const result = await launch(input);
+    const thread = f.t3.states.get(result.threadId)!.thread;
+    thread.branch = null;
+    thread.worktreePath = null;
+    return result;
+  };
+  f.store.receive("one", event("one"));
+  await f.service.tick();
+
+  const session = f.store.sessions()[0]!;
+  const thread = f.t3.states.get(session.threadId!)!.thread;
+  thread.branch = "t3-generated-branch";
+  thread.worktreePath = "/worktree";
+  f.t3.finish(thread.threadId);
+  await f.service.tick();
+
+  assert.deepEqual(f.store.sessions()[0]?.workspace, { branch: thread.branch, worktreePath: thread.worktreePath });
+  assert.equal(f.store.sessions()[0]?.status, "completed");
+  assert.ok(f.delivered.some(report => report.type === "response"));
   assert.equal(f.t3.sent.length, 1);
 });
 
@@ -324,7 +374,7 @@ test("restart after the final-report commit continues pending input without rele
   assert.deepEqual(saved.inputs, [{ key: "follow", text: "Continue the investigation" }]);
   const finalReport = f.store.reports().find(report => report.type === "response")!;
   f.reopen();
-  const restarted = new SessionService(f.store, f.t3, f.linear, f.config, "full-access");
+  const restarted = new SessionService(f.store, f.t3, f.linear, f.config);
   await restarted.tick(); await restarted.tick();
   assert.deepEqual(f.t3.sent.slice(1), ["Continue the investigation"]);
   assert.equal(f.t3.launched.length, 1); assert.equal(f.store.sessions()[1]!.status, "queued");
@@ -350,7 +400,7 @@ test("ticket labels select reasoning, persist through restart and ignore follow-
   f.t3.finish(f.store.sessions()[0]!.threadId!);
   f.reopen();
   f.store.receive("follow", event("one", "prompted", "Continue", "follow"));
-  await new SessionService(f.store, f.t3, f.linear, f.config, "full-access").tick();
+  await new SessionService(f.store, f.t3, f.linear, f.config).tick();
   assert.deepEqual(f.t3.selections, [selected]);
   assert.deepEqual(f.store.sessions()[0]!.modelSelection, selected);
   assert.equal(f.t3.sent.at(-1), "Continue");
@@ -367,16 +417,16 @@ test("conflicting routing labels wait without launch and correction retries the 
   assert.deepEqual(f.t3.selections, [{ instanceId: "codex", model: "gpt-6-luna", options: { reasoningEffort: "low" } }]);
 });
 
-test("unavailable routing selection prevents launch and remains pinned", async t => {
+test("unavailable routing selection waits for corrected labels", async t => {
   const f = await fixture(t);
   f.labels.set("one", ["harness:claude-code"]);
   const capabilities = f.t3.capabilities.bind(f.t3);
   f.t3.capabilities = async () => ({ ...await capabilities(), providers: [] });
   f.store.receive("one", event("one")); await f.service.tick();
-  assert.equal(f.store.sessions()[0]!.status, "failed");
+  assert.equal(f.store.sessions()[0]!.status, "clarification");
   assert.equal(f.t3.launched.length, 0);
   f.labels.set("one", ["harness:codex"]);
   f.t3.capabilities = capabilities;
   f.store.receive("retry", event("one", "prompted", "Retry", "retry")); await f.service.tick();
-  assert.equal(f.t3.selections[0]!.model, "claude-opus-5-5");
+  assert.equal(f.t3.selections[0]!.model, "gpt-6.1-sol");
 });

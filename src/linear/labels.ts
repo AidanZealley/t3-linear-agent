@@ -1,4 +1,4 @@
-type Label = { name: string; parent?: PromiseLike<{ name: string } | undefined> };
+type Label = { name: string; parent?: { name: string } | PromiseLike<{ name: string } | undefined> | null };
 
 // Linear stores grouped labels as a child name plus a parent, not "group:child".
 export async function routingLabels(labels: Label[]): Promise<string[]> {
