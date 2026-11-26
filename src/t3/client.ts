@@ -95,17 +95,23 @@ export class T3Client {
   private readonly file: CredentialFile;
   private readonly authorization: Pick<LocalAuthorization, "issue" | "revoke">;
   private readonly connect: typeof connectMcp;
+  private readonly runtimeMode: Credential["runtimeMode"];
+  private readonly validate?: (reads: ReconciliationReads) => Promise<void>;
   constructor(
     credential: Credential,
     file: CredentialFile,
     authorization: Pick<LocalAuthorization, "issue" | "revoke">,
     connect = connectMcp,
     uncertain: UncertainOperation[] = [],
+    runtimeMode = credential.runtimeMode,
+    validate?: (reads: ReconciliationReads) => Promise<void>,
   ) {
     this.credential = credential;
     this.file = file;
     this.authorization = authorization;
     this.connect = connect;
+    this.runtimeMode = runtimeMode;
+    this.validate = validate;
     this.uncertain = [...uncertain];
     if (uncertain.length)
       this.pausedReason =
@@ -118,7 +124,7 @@ export class T3Client {
     const reason =
       this.closed
         ? "T3 client is closed."
-        : this.credential.expiresAt <= Date.now()
+        : !this.pausedReason && this.credential.expiresAt <= Date.now()
         ? "T3 credential expired. Renew local authorization before dispatch."
         : this.pausedReason;
     return {
@@ -149,9 +155,12 @@ export class T3Client {
       throw new Error(
         "T3 credential expired. Renew local authorization before dispatch.",
       );
+    if (this.runtimeMode !== this.credential.runtimeMode)
+      throw new Error("T3 credential must be renewed for the configured runtime mode.");
     this.connection = await this.connect(this.credential);
     try {
       await this.connection.call("t3_project_list", {});
+      await this.validate?.(this.reads(this.connection));
     } catch {
       await this.connection.close();
       this.connection = undefined;
@@ -160,13 +169,18 @@ export class T3Client {
       );
     }
   }
-  static async create(config: T3Config, uncertain: UncertainOperation[] = []) {
+  static async create(
+    config: T3Config,
+    uncertain: UncertainOperation[] = [],
+    validate?: (reads: ReconciliationReads) => Promise<void>,
+  ) {
     const file = new CredentialFile(config.credentialFile);
     const authorization = new LocalAuthorization(config);
     const credential = await file.read();
     if (
       credential.endpoint !== config.endpoint ||
-      credential.runtimeMode !== config.runtimeMode
+      (credential.runtimeMode !== config.runtimeMode &&
+        !(validate && credential.runtimeMode === "full-access" && config.runtimeMode === "auto"))
     )
       throw new Error(
         "Stored T3 authorization differs from configured endpoint or runtime ceiling.",
@@ -177,8 +191,12 @@ export class T3Client {
       authorization,
       connectMcp,
       uncertain,
+      config.runtimeMode,
+      validate,
     );
-    await client.open();
+    if (validate) {
+      client.pausedReason = "T3 authorization has not been verified. The bridge will retry.";
+    } else await client.open();
     return client;
   }
   private request<K extends keyof T3Tools>(
@@ -259,13 +277,13 @@ export class T3Client {
       "title" | "runtimeMode" | "interactionMode"
     > & {
       projectId: string;
-      workspaceStrategy: {
+      workspaceStrategy?: {
         type: "worktree";
         baseRef: string;
         branch: string;
         startFromOrigin: boolean;
       };
-      modelSelection: {
+      modelSelection?: {
         instanceId: string;
         model: string;
         options?: Record<string, unknown>;
@@ -286,15 +304,15 @@ export class T3Client {
       {
         title,
         projectId,
-        workspaceStrategy,
-        modelSelection,
+        ...(workspaceStrategy ? { workspaceStrategy } : {}),
+        ...(modelSelection ? { modelSelection } : {}),
         ...(runtimeMode ? { runtimeMode } : {}),
         ...(interactionMode ? { interactionMode } : {}),
       },
       undefined,
       async (launched, connection, operation) => {
         operation.acceptedThreadId = launched.threadId;
-        await this.confirmWorktree(
+        if (workspaceStrategy) await this.confirmWorktree(
           connection,
           launched.threadId,
           projectId,
@@ -382,13 +400,14 @@ export class T3Client {
     try {
       await Promise.allSettled([...this.inFlight]);
       if (this.retirements.length) await this.retireCredentials();
-      if (this.uncertain.length) {
-        if (!reconcile || !this.connection)
+      const usableConnection = this.credential.expiresAt > Date.now() ? this.connection : undefined;
+      if (this.uncertain.length && (!reconcile || usableConnection)) {
+        if (!reconcile || !usableConnection)
           throw new Error(
             "Uncertain T3 mutations require lifecycle reconciliation before credential replacement.",
           );
         const resolved = new Set(
-          await reconcile(this.status.uncertain, this.reads(this.connection)),
+          await reconcile(this.status.uncertain, this.reads(usableConnection)),
         );
         this.uncertain = this.uncertain.filter(
           (operation) => !resolved.has(operation.id),
@@ -398,16 +417,23 @@ export class T3Client {
             "T3 mutation outcomes remain ambiguous. Operator reconciliation is required.",
           );
       }
-      candidate = await this.authorization.issue(this.credential);
+      candidate = await this.authorization.issue({ ...this.credential, runtimeMode: this.runtimeMode });
       if (
         candidate.endpoint !== this.credential.endpoint ||
-        candidate.runtimeMode !== this.credential.runtimeMode ||
+        candidate.runtimeMode !== this.runtimeMode ||
         [...candidate.scopes].sort().join(" ") !==
           [...this.credential.scopes].sort().join(" ")
       )
         throw new Error("T3 replacement changed the original authorization.");
       replacement = await this.connect(candidate);
       await replacement.call("t3_project_list", {});
+      await this.validate?.(this.reads(replacement));
+      if (this.uncertain.length) {
+        const resolved = new Set(await reconcile!(this.status.uncertain, this.reads(replacement)));
+        this.uncertain = this.uncertain.filter(operation => !resolved.has(operation.id));
+        if (this.uncertain.length)
+          throw new Error("T3 mutation outcomes remain ambiguous.");
+      }
       await this.file.write(candidate);
       const old = this.credential;
       const previous = this.connection;
@@ -428,7 +454,7 @@ export class T3Client {
       if (this.uncertain.length)
         this.pausedReason =
           "Uncertain T3 mutations remain. Reconcile durable state before renewing or dispatching.";
-      else if (this.credential.expiresAt > Date.now() && this.connection) {
+      else if (this.credential.runtimeMode === this.runtimeMode && this.credential.expiresAt > Date.now() && this.connection) {
         try {
           await this.connection.call("t3_project_list", {});
           this.pausedReason = undefined;
@@ -438,7 +464,9 @@ export class T3Client {
         }
       } else
         this.pausedReason =
-          "T3 authorization expired. Renew locally before dispatch.";
+          this.credential.expiresAt <= Date.now()
+          ? "T3 authorization expired and renewal failed. The bridge will retry."
+          : "T3 authorization could not be renewed or verified. The bridge will retry.";
       if (error instanceof AuthorizationCleanupError) throw error;
       throw new Error(
         this.pausedReason ??
@@ -491,15 +519,27 @@ export class T3Client {
     };
     if (this.closed) throw new Error("T3 client is closed.");
     if (this.renewalTimer) throw new Error("T3 renewal is already scheduled.");
-    schedule(this.credential.expiresAt - Date.now() - 5 * 86_400_000);
+    schedule(this.runtimeMode === this.credential.runtimeMode
+      ? this.credential.expiresAt - Date.now() - 5 * 86_400_000
+      : 0);
   }
   reconnect() {
+    // The renewal timer owns expired credentials and runtime-mode migrations.
+    if (this.validate && (this.lifecycle || this.credential.expiresAt <= Date.now() ||
+      this.runtimeMode !== this.credential.runtimeMode)) return Promise.resolve();
     return this.exclusiveLifecycle(async () => {
       this.pausedReason = "T3 reconnect is in progress.";
       await Promise.allSettled([...this.inFlight]);
       await this.connection?.close();
       this.connection = undefined;
-      await this.openConnection();
+      try {
+        await this.openConnection();
+      } catch (error) {
+        this.pausedReason = this.credential.expiresAt <= Date.now()
+          ? "T3 authorization expired. The bridge will retry renewal."
+          : "T3 connection or configuration could not be verified. The bridge will retry.";
+        throw error;
+      }
       this.pausedReason = this.uncertain.length
         ? "Reconcile uncertain T3 mutations before dispatch."
         : undefined;

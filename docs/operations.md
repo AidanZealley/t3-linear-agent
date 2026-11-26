@@ -53,38 +53,22 @@ Add label menu by entering `harness:claude-code`, `harness:codex`, `difficulty:l
 `group:child`. The bridge accepts both grouped labels and ordinary labels whose
 full names match these strings. See [Linear's label documentation](https://linear.app/docs/issue-property#issue-labels).
 
-Apply one harness label and one difficulty label before delegating a ticket to T3.
-For example, `harness:claude-code` and `difficulty:high` select Opus 5.5 with high
-reasoning. `harness:codex` and `difficulty:low` select GPT-6 Luna with low reasoning.
+Without routing labels, T3 chooses the model and reasoning using its current
+new-thread settings. A harness label chooses the newest available model in its
+default family, GPT Sol for Codex or Claude Opus for Claude Code, and uses the
+model's default reasoning. The bridge reads the model catalog at dispatch.
 
-The mapping is:
+With a difficulty label, the bridge uses these families and reasoning levels:
 
-- Claude Code, low: Sonnet 5.5 with low reasoning.
-- Claude Code, medium: Opus 5.5 with medium reasoning.
-- Claude Code, high: Opus 5.5 with high reasoning.
-- Codex, low: GPT-6 Luna with low reasoning.
-- Codex, medium: GPT-6.1 Sol with low reasoning.
-- Codex, high: GPT-6.1 Sol with high reasoning.
+| Harness | Low | Medium | High |
+| --- | --- | --- | --- |
+| Codex | GPT Luna, low | GPT Sol, low | GPT Sol, high |
+| Claude Code | Claude Sonnet, low | Claude Opus, medium | Claude Opus, high |
 
-Missing difficulty means medium. Missing harness uses `providerInstanceId` in the
-private `sessions.json`: `claudeAgent` means Claude Code and `codex` means Codex.
-These providers use the mapping even without labels; their configured `model`
-does not override it. Other provider IDs keep their configured model without
-routing labels and need an explicit harness label to use a difficulty label.
-The mapping uses T3's standard instance IDs `claudeAgent` and `codex`.
-
-Conflicting or unsupported `harness:` or `difficulty:` labels request clarification
-before a thread starts. Fix the labels and reply in the Linear session to retry.
-Unrelated labels are ignored. Labels and values are case-sensitive.
-
-The bridge checks that T3 supports the selected provider, model and reasoning
-setting and includes the selection in its working activity. It retains the
-selection across restarts and retries. After selection, label edits do not change
-that session. Existing threads keep their current model; use a new session to
-apply new routing labels.
-
-After installing this code change, rebuild and restart the bridge using the
-update steps below. Creating labels alone does not update the running service.
+A difficulty label alone uses a supported project-level T3 model default if one
+is set. Otherwise add a harness label. If the labels conflict or T3 offers no
+matching model, the bridge asks for clarification. Update the labels or T3
+settings and reply in the session. Existing threads keep their model.
 
 ## Configuration overrides
 
@@ -105,8 +89,7 @@ The defaults live under `~/.local/state/t3-linear-agent`. See the checked-in
 
 Set overrides in your private `service.env`. Use absolute paths for file overrides;
 that file does not perform shell expansion of `~` or `$HOME` when systemd reads it.
-Restart the bridge after configuration changes. New sessions use the configured
-provider/model; existing threads retain their model.
+Restart the bridge after configuration changes. New sessions use the current T3 defaults and any Linear label overrides.
 
 ## Backups and updates
 
@@ -128,6 +111,16 @@ then run `pnpm install --frozen-lockfile` and `pnpm build`. Start the bridge aga
 Reload systemd if you changed the installed unit or override. Existing T3 coding
 runs continue independently when the bridge stops; startup reconciles saved work
 before dispatching queued sessions.
+
+Use `T3_RUNTIME_MODE=auto` for unattended coding with the bridge's two
+orchestration scopes. Current T3 versions require additional scopes for
+`full-access`. Changing an existing bridge from `full-access` to `auto` lets
+it renew the stored credential with the lower runtime ceiling. It keeps the
+existing scopes and reconciles unresolved delivery intents before dispatch.
+
+When T3 authorization is unavailable, the bridge can still accept webhooks
+and report a safe error in affected Linear sessions. It retains queued work
+and retries authorization. Delivery of those reports requires Linear access.
 
 Linear tokens refresh automatically. T3 credentials renew five days before expiry
 using local authorization and reconcile uncertain operations before switching.

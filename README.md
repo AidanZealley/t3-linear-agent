@@ -1,7 +1,7 @@
 # t3-linear-agent
 
 Connect Linear to a self-hosted T3 Code server. Delegate an issue to T3 in Linear,
-run the work in an isolated worktree on your server, and receive progress, answers
+run the work in T3 on your server, and receive progress, answers
 and pull request links in the same Linear session.
 
 One coding session runs at a time. Follow-ups stay on their original T3 thread.
@@ -16,7 +16,7 @@ Install on the Linux machine running T3, as the same user who owns T3:
 - A running T3 server with external authenticated MCP, local authorization CLI,
   and an authenticated coding provider. The default MCP endpoint is
   `http://127.0.0.1:3773/mcp`.
-- Git repositories registered as T3 projects, with local base branches available.
+- Repositories registered as T3 projects.
 - Linear workspace admin access to register and install an OAuth app.
 - A public HTTPS endpoint for this bridge. The steps below use
   [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel).
@@ -80,12 +80,11 @@ Edit the private copies:
   a route. The setup password protects the installation route and is separate
   from your Linear password.
 - [service.env](examples/service.env): choose `T3_RUNTIME_MODE` before pairing.
-  The example uses `approval-required`. Supported values are `approval-required`,
-  `auto-accept-edits`, `auto` and `full-access`. Approvals stay in T3; Linear
-  messages do not grant more permissions. Use `full-access` only when you want
-  unattended commands, including authorized Git pushes and PR creation.
-- [sessions.json](examples/sessions.json): fill this in after discovering the
-  project and model IDs in step 4.
+  The example uses `auto` with the bridge's two orchestration scopes.
+  `approval-required` and `auto-accept-edits` also work with those scopes.
+  Current T3 versions require additional scopes for `full-access`.
+  Permission approvals stay in T3.
+- [sessions.json](examples/sessions.json): optionally adjust the concurrency limit.
 
 Keep credentials, the SQLite store and backups private. The state directory must
 be mode 0700 and its files mode 0600. Edit only the private copies, never put
@@ -142,22 +141,18 @@ Pairing securely creates `t3.json`; do not write that generated credential by ha
 or pair again over an existing credential. Inspection returns available project
 IDs, provider instance IDs and model IDs.
 
-Edit your private `sessions.json` using those values. Each project entry needs
-its absolute Git repository root and an existing local base branch. Add only
-repositories you want this bridge to use. A Linear issue's project name must
-exactly match the T3 project's title, including case. A missing or ambiguous match
-asks for clarification instead of choosing another repository.
+A Linear issue's project name must match exactly one active T3 project, including
+case. Every matching T3 project is available for delegation. T3 applies its
+current new-thread settings, including whether to open a worktree and whether to
+start from origin. The bridge's T3 credential sets the runtime ceiling.
 
 `maxActiveSessions` sets the global limit for concurrent Linear sessions and
 defaults to 5. Set it to a positive integer in `sessions.json` and restart the
 service to change it. Extra sessions wait in the durable queue. Paused sessions
 and pending cancellations reserve a slot until reconciled.
 
-The provider setting supplies the default harness independently of T3's default.
-For `codex` and `claudeAgent`, ticket labels select the model and reasoning level
-using the mapping in [the operating guide](docs/operations.md#ticket-model-selection).
-Without labels, these providers use their medium difficulty mapping. Other provider
-IDs retain their configured model unless a supported harness label overrides them.
+Linear labels can override the model family and reasoning as described in the
+[operating guide](docs/operations.md#ticket-model-selection).
 
 The defaults assume T3 uses its normal local endpoint and data directory. For
 another endpoint or installation, add the relevant variables to `service.env`
@@ -190,8 +185,8 @@ to enable lingering for your user with `loginctl enable-linger USERNAME`.
 
 Create an issue in a matching Linear project and delegate it to T3. Describe the
 work, constraints and expected checks normally. For a first test, choose a small
-change in a development repository. The bridge acknowledges, creates a T3-managed
-worktree, reports progress and returns the final answer and any PR URL. Permission
+change in a development repository. The bridge acknowledges, creates a thread using the project’s T3 defaults,
+reports progress and returns the final answer and any PR URL. Permission
 prompts appear in T3 when the selected runtime requires them.
 
 ## Operation and development

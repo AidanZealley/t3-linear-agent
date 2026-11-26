@@ -150,6 +150,7 @@ export interface T3Tools {
           id: string;
           label: string | null;
           options?: Array<
+            | { id: string; values: string[]; default?: string; type?: never; [key: string]: unknown }
             | {
                 currentValue?: string | null;
                 description?: string | null;

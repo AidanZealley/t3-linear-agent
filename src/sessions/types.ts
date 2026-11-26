@@ -11,7 +11,8 @@ export type Session = {
   threadId?: string;
   runId?: string;
   title: string;
-  branch: string;
+  branch?: string;
+  workspace?: { branch: string | null; worktreePath: string | null };
   inputs: Array<{ key: string; text: string }>;
   seen: string[];
   cursor: number;
